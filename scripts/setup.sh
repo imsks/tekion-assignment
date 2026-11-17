@@ -31,11 +31,21 @@ import_workflows() {
   n8n_cli import:workflow --separate --input=/opt/workflows
 }
 
-run_setup_workflow() {
-  local id
-  id=$(jq -rs 'map(select(.name | startswith("CG · 00"))) | first | .id // empty' workflows/*.json 2>/dev/null || true)
-  [[ -n "$id" ]] || return 0
-  n8n_cli execute --id "$id"
+create_data_tables() {
+  # Data Table nodes only run inside the n8n server (not via `n8n execute`), so the
+  # published CG · 00 Setup workflow is triggered through its authenticated webhook.
+  # Webhooks register a few seconds after /healthz turns green, hence the retries.
+  local port="${N8N_HOST_PORT:-5678}" i
+  for i in $(seq 1 30); do
+    if curl -fsS -X POST "http://localhost:${port}/webhook/content/setup" \
+         -H @<(printf 'X-API-Key: %s\n' "$WEBHOOK_API_KEY") >/dev/null 2>&1; then
+      echo "Data tables ready: content_runs, content_errors"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Could not reach the setup webhook; open CG · 00 Setup in the editor and run it manually" >&2
+  return 1
 }
 
 publish_workflows() {
@@ -102,7 +112,7 @@ EOF
 
 case "${1:-all}" in
   credentials) import_credentials ;;
-  workflows) import_workflows; run_setup_workflow; publish_workflows; restart_n8n ;;
-  all) import_credentials; import_workflows; run_setup_workflow; publish_workflows; restart_n8n; print_next_steps ;;
+  workflows) import_workflows; publish_workflows; restart_n8n; create_data_tables ;;
+  all) import_credentials; import_workflows; publish_workflows; restart_n8n; create_data_tables; print_next_steps ;;
   *) echo "Usage: $0 [all|credentials|workflows]"; exit 1 ;;
 esac

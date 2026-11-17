@@ -210,15 +210,40 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -32,
-        -96
+        -60,
+        -260
       ],
       "parameters": {
-        "content": "## One-time setup\nCreates the two Data Tables used by the content workflows. Safe to re-run: existing tables are kept (createIfNotExists).\n\n- **content_runs**: one row per generation run (inputs, diversity choices, models, quality, timing, cost). Read by the diversity planner.\n- **content_errors**: one row per failed execution, written by the error handler.",
+        "content": "## CG · 00 Setup\nCreates the two Data Tables used by the content workflows. Safe to re-run: existing tables are kept (createIfNotExists).\n\nRun it from the editor (**Run Setup**) or let `scripts/setup.sh` call `POST /webhook/content/setup` (X-API-Key) after import.\n\n- **content_runs**: one row per generation run (inputs, diversity choices, models, quality, timing, cost). Read by the diversity planner.\n- **content_errors**: one row per failed execution, written by the error handler.",
         "color": 7,
         "width": 688,
         "height": 224
       }
+    },
+    {
+      "id": "a8804fc7-dc8a-44fb-9a2c-5813258a3bce",
+      "name": "Setup API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "authentication": "headerAuth",
+        "httpMethod": "POST",
+        "options": {},
+        "path": "content/setup",
+        "responseData": "allEntries",
+        "responseMode": "lastNode"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CgWebhookApiKey1",
+          "name": "Content API key (X-API-Key)"
+        }
+      },
+      "webhookId": "7d639878-1a26-44b5-b712-2382aefdf677"
     }
   ],
   "connections": {
@@ -238,6 +263,17 @@
         [
           {
             "node": "Create content_errors Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup API": {
+      "main": [
+        [
+          {
+            "node": "Create content_runs Table",
             "type": "main",
             "index": 0
           }
