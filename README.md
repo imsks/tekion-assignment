@@ -2,7 +2,7 @@
 
 Send a topic through an API, a web form or a batch request and get back a 500–800 word piece in one of five formats (article, how-to guide, opinion, trend analysis, listicle) plus a matching AI-generated image, in about a minute. Each run is planned against recent history, so a repeated topic gets a different angle, hook and visual direction (and format, when the style is `auto`) than the run before it. Everything runs as n8n workflows in Docker, with Google Gemini for text and images.
 
-**Demo video:** _link to be added_
+**Demo video:** [Link](https://drive.google.com/file/d/1iN_3SsqTeoDYxko40wbIneP25fT58UUZ/view?usp=sharing)
 
 | Deliverable | Where |
 |---|---|
@@ -60,6 +60,12 @@ source .env && curl -X POST http://localhost:5678/webhook/content \
 ```
 
 Or open http://localhost:5678/form/content-form. Full instructions and troubleshooting: [docs/setup.md](docs/setup.md).
+
+## Screenshots
+![1](assets/1.png)
+![2](assets/2.png)
+![3](assets/3.png)
+![3](assets/4.png)
 
 ## Key design decisions
 
