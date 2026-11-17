@@ -50,6 +50,8 @@ It:
 
 Re-running it is safe. `scripts/setup.sh workflows` re-imports and re-publishes only the workflows.
 
+**Using your own n8n 2.x instead.** Import with the CLI so workflow IDs, and therefore the sub-workflow links, are kept: `docker cp workflows <container>:/tmp/cg && docker exec <container> n8n import:workflow --separate --input=/tmp/cg`. Then create the two credentials in the UI and pick them wherever n8n flags a missing credential, mount `config/` and `outputs/` at `/home/node/.n8n-files/config` and `/home/node/.n8n-files/outputs`, publish (gateways and error handler first, intake last) and run **CG · 00 Setup** once.
+
 ## 5. Generate content
 
 **Form**: open http://localhost:5678/form/content-form, enter a topic, press Generate. The result page shows the article, image, status, timings, cost and diversity choices.

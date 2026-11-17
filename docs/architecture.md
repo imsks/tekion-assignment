@@ -149,7 +149,7 @@ Why HTTP Request nodes instead of the built-in Gemini nodes: the built-in image 
 | Per-call timeouts | brief 45 s, draft/revision 75 s, image 90 s (each capped by the deadline) |
 | Workflow timeouts | Intake 300 s, pipeline 290 s, gateways 280 s, batch runner 1 h |
 
-Worst case is bounded by the deadline, not by the sum of timeouts. Typical runs take 37–73 s.
+Worst case is bounded by the deadline, not by the sum of timeouts. Measured runs took 37–73 s (section 12).
 
 ## 9. Error handling
 
@@ -188,7 +188,7 @@ From the sample batch (7 topics, concurrency 3) and single API runs on the same 
 
 | Metric | Value |
 |---|---|
-| Single run, typical | 37–55 s (brief ~10–18 s, draft ~11–17 s, image ~6–31 s) |
+| Single runs | 37–73 s: brief ~10–18 s, draft ~11–17 s (about 12 s more per revision), image ~6–31 s |
 | Batch of 7, concurrency 3 | 158 s wall time; p50 45 s, p95 64 s per run; 7/7 within 5 minutes |
 | Cost per run | $0.07–0.10 (about $0.045 of it is the image); $0.04 on the fallback models |
 

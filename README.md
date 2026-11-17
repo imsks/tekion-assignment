@@ -1,6 +1,6 @@
 # AI Content Generation Workflow (n8n + Gemini)
 
-Send a topic through an API, a web form or a batch request and get back a 500–800 word piece in one of five formats (article, how-to guide, opinion, trend analysis, listicle) plus a matching AI-generated image, in about a minute. Runs are steered away from recent ones so the same topic never comes back with the same format, angle or visual style. Everything runs as n8n workflows in Docker, with Google Gemini for text and images.
+Send a topic through an API, a web form or a batch request and get back a 500–800 word piece in one of five formats (article, how-to guide, opinion, trend analysis, listicle) plus a matching AI-generated image, in about a minute. Each run is planned against recent history, so a repeated topic gets a different angle, hook and visual direction (and format, when the style is `auto`) than the run before it. Everything runs as n8n workflows in Docker, with Google Gemini for text and images.
 
 **Demo video:** _link to be added_
 
@@ -70,7 +70,17 @@ Or open http://localhost:5678/form/content-form. Full instructions and troublesh
 - **Graceful degradation over failure.** A missing image yields `partial`, failing checks yield `needs_review` with the reasons; only a missing article is a failure.
 - **Synchronous API, asynchronous batch.** One run finishes well inside 5 minutes, so the API answers directly; bulk work is accepted with `202` and polled.
 
-Assumptions, limitations and the path to large-scale operation (queue mode, Postgres, rate limiting, Gemini Batch API, object storage) are in [docs/architecture.md](docs/architecture.md#13-scaling-to-large-volumes).
+The path to large-scale operation (queue mode, Postgres, rate limiting, Gemini Batch API, object storage) is in [docs/architecture.md](docs/architecture.md#13-scaling-to-large-volumes).
+
+## Assumptions
+
+- Content is in English for a professional audience. The samples use automotive retail topics, but nothing in the pipeline is domain-specific.
+- "500–800 words" counts the article body (headings included, title excluded). Each piece gets one image, 16:9 at 1K by default.
+- The API is synchronous because runs finish well inside 5 minutes; bulk work goes through the asynchronous batch API.
+- Output is stored on the local disk and in n8n Data Tables; publishing to a CMS is out of scope.
+- There is no web search: the writer must not invent figures, quotes or sources and links are rejected, but facts are not otherwise verified.
+
+The full list, with known limitations, is in [docs/architecture.md](docs/architecture.md#14-assumptions).
 
 ## Repository layout
 
