@@ -1,0 +1,13 @@
+{
+  "concurrency": 3,
+  "defaults": { "image_aspect": "16:9" },
+  "topics": [
+    { "topic": "Why the car-buying journey is moving online, and what still belongs in the showroom", "style": "article" },
+    { "topic": "How to launch a digital retailing program at a car dealership", "style": "guide" },
+    { "topic": "Dealerships should publish transparent, no-haggle prices", "style": "opinion" },
+    { "topic": "How electric vehicles will change dealership service revenue", "style": "trend_analysis" },
+    { "topic": "Ways dealerships can cut used-car reconditioning time", "style": "listicle" },
+    { "topic": "Using connected-car data to keep dealership customers coming back", "style": "auto" },
+    { "topic": "Using connected-car data to keep dealership customers coming back", "style": "auto" }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "batch_id": "batch-20261117-130643-roclg3",
+  "status": "completed",
+  "submitted_at": "2026-11-17T13:06:43.872+05:30",
+  "completed_at": "2026-11-17T13:09:21.481+05:30",
+  "wall_time_ms": 157607,
+  "count": 7,
+  "concurrency": 3,
+  "by_status": {
+    "success": 7
+  },
+  "runs_within_5_min": 7,
+  "latency_ms": {
+    "p50": 45114,
+    "p95": 63852,
+    "max": 63852
+  },
+  "cost_usd_total": 0.5476,
+  "items": [
+    {
+      "index": 1,
+      "topic": "Why the car-buying journey is moving online, and what still belongs in the showroom",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130644-p05acu",
+      "style": "article",
+      "title": "The Hybrid Car-Buying Playbook: What Goes Online, What Stays in the Showroom",
+      "word_count": 684,
+      "duration_ms": 37148,
+      "cost_usd": 0.0699,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 2,
+      "topic": "How to launch a digital retailing program at a car dealership",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130644-zf5b8v",
+      "style": "guide",
+      "title": "How to Launch Digital Retailing Without Breaking Your Dealership",
+      "word_count": 674,
+      "duration_ms": 48201,
+      "cost_usd": 0.0816,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 3,
+      "topic": "Dealerships should publish transparent, no-haggle prices",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130644-h12ef3",
+      "style": "opinion",
+      "title": "Why Transparent, No-Haggle Pricing Is the Only Way Forward for Car Dealerships",
+      "word_count": 645,
+      "duration_ms": 45445,
+      "cost_usd": 0.0819,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 4,
+      "topic": "How electric vehicles will change dealership service revenue",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130732-8wzei6",
+      "style": "trend_analysis",
+      "title": "How Electric Vehicles Will Reshape Dealership Service Revenue",
+      "word_count": 546,
+      "duration_ms": 44378,
+      "cost_usd": 0.0743,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 5,
+      "topic": "Ways dealerships can cut used-car reconditioning time",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130732-q9fze4",
+      "style": "listicle",
+      "title": "5 Ways to Cut Used-Car Reconditioning Time and Boost ROI",
+      "word_count": 542,
+      "duration_ms": 41796,
+      "cost_usd": 0.085,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 6,
+      "topic": "Using connected-car data to keep dealership customers coming back",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130732-e9jft2",
+      "style": "article",
+      "title": "From Guesswork to Telemetry: How Connected-Car Data Keeps Dealership Customers Returning",
+      "word_count": 611,
+      "duration_ms": 45114,
+      "cost_usd": 0.0759,
+      "fallback_used": false,
+      "error": null
+    },
+    {
+      "index": 7,
+      "topic": "Using connected-car data to keep dealership customers coming back",
+      "http_status": 200,
+      "status": "success",
+      "run_id": "cg-20261117-130817-3vqspl",
+      "style": "listicle",
+      "title": "5 Ways Connected-Car Data Actually Wins Back Skeptical Drivers",
+      "word_count": 575,
+      "duration_ms": 63852,
+      "cost_usd": 0.079,
+      "fallback_used": false,
+      "error": null
+    }
+  ]
+}

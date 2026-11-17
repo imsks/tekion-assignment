@@ -1,0 +1,248 @@
+{
+  "status": "success",
+  "run_id": "cg-20261117-130644-p05acu",
+  "topic": "Why the car-buying journey is moving online, and what still belongs in the showroom",
+  "style": "article",
+  "title": "The Hybrid Car-Buying Playbook: What Goes Online, What Stays in the Showroom",
+  "slug": "the-hybrid-car-buying-playbook-what-goes-online-what-stays-in-the-showroom",
+  "meta_description": "Skeptical of digital car-buying hype? Learn why shoppers research and finance online, what still belongs in the showroom, and what your team can do this quarter.",
+  "word_count": 684,
+  "image": {
+    "status": "generated",
+    "path": "outputs/cg-20261117-130644-p05acu.jpg",
+    "model": "gemini-nano-banana-2.1",
+    "fallback_used": false,
+    "aspect_ratio": "16:9",
+    "prompt": "Create a cinematic still with shallow depth of field image to accompany an article titled \"The Hybrid Car-Buying Playbook: What Goes Online, What Stays in the Showroom\".\nSubject: A couple standing beside a sleek, unbranded silver crossover SUV, examining the open rear cargo area.\nSetting: A bright, modern, minimalist automotive showroom with clean concrete floors and large glass windows letting in natural daylight.\nDetails: A salesperson in smart-casual attire holds a tablet, while the couple gestures toward the trunk space; no logos, brand badges, or readable text are visible.\nMood: Calm, collaborative, and transparent.\nComposition: wide establishing shot.\nColor palette: earthy greens and sand.\nLighting: soft diffused studio light.\nDo not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.",
+    "error": null
+  },
+  "diversity": {
+    "style_source": "requested",
+    "angle": "playbook",
+    "hook": "scenario",
+    "audience": "skeptics who doubt the hype",
+    "visual": {
+      "style": "cinematic still with shallow depth of field",
+      "composition": "wide establishing shot",
+      "palette": "earthy greens and sand",
+      "lighting": "soft diffused studio light"
+    },
+    "history_considered": 4,
+    "related_runs": 0,
+    "novelty_score": 1,
+    "seed": 659510368
+  },
+  "quality": {
+    "passed": true,
+    "revisions": 0,
+    "checks": [
+      {
+        "id": "word_count",
+        "passed": true,
+        "detail": "684 words (allowed 500-800)"
+      },
+      {
+        "id": "sections",
+        "passed": true,
+        "detail": "6 ## sections (min 3)"
+      },
+      {
+        "id": "paragraph_length",
+        "passed": true,
+        "detail": "0 paragraphs over 120 words"
+      },
+      {
+        "id": "banned_phrases",
+        "passed": true,
+        "detail": "none found"
+      },
+      {
+        "id": "no_links",
+        "passed": true,
+        "detail": "no links"
+      }
+    ],
+    "rounds": [
+      {
+        "draft": 0,
+        "word_count": 684,
+        "failed": []
+      }
+    ]
+  },
+  "warnings": [],
+  "models": {
+    "text": "gemini-4-hydrogen",
+    "image": "gemini-nano-banana-2.1",
+    "fallback_used": false
+  },
+  "cost_usd": 0.0699,
+  "timings_ms": {
+    "brief": 12691,
+    "write": 11601,
+    "image": 12588,
+    "total": 37148
+  },
+  "error": null,
+  "generated_at": "2026-11-17T07:37:21.131Z",
+  "source": "api",
+  "request_id": "batch-20261117-130643-roclg3-01",
+  "request": {
+    "topic": "Why the car-buying journey is moving online, and what still belongs in the showroom",
+    "style_requested": "article",
+    "audience": "",
+    "tone": "",
+    "word_target": 650,
+    "image_aspect": "16:9"
+  },
+  "plan": {
+    "style": "article",
+    "style_source": "requested",
+    "angle": {
+      "id": "playbook",
+      "text": "A playbook of concrete moves a team can make this quarter"
+    },
+    "hook": {
+      "id": "scenario",
+      "text": "Open with a short, vivid scenario"
+    },
+    "audience": {
+      "id": "skeptics",
+      "text": "skeptics who doubt the hype"
+    },
+    "tone": "Informative, clear and confident, without hype",
+    "visual": {
+      "style": "cinematic still with shallow depth of field",
+      "composition": "wide establishing shot",
+      "palette": "earthy greens and sand",
+      "lighting": "soft diffused studio light"
+    },
+    "topic_key": "belong buying car journey moving online showroom still",
+    "history_considered": 4,
+    "related_runs": 0,
+    "avoid_titles": [],
+    "seed": 659510368
+  },
+  "brief": {
+    "title": "The Hybrid Car-Buying Playbook: What Goes Online, What Stays in the Showroom",
+    "slug": "the-hybrid-car-buying-playbook-what-goes-online-what-stays-in-the-showroom",
+    "meta_description": "Skeptical of digital car-buying hype? Learn why shoppers research and finance online, what still belongs in the showroom, and what your team can do this quarter.",
+    "thesis": "Car buyers now expect to complete research, pricing, and financing online, reserving the showroom for high-trust physical experiences like test drives and final handoffs.",
+    "sections": [
+      {
+        "heading": "The New Reality at the Dealership Door",
+        "key_points": [
+          "Open with a vivid scenario: A buyer walks into a dealership on a Saturday morning, already knowing the exact vehicle identification number, trade-in range, and monthly payment they want.",
+          "Frame why this matters now: Even skeptical dealers must adapt because buyers are arriving further down the funnel than ever before."
+        ]
+      },
+      {
+        "heading": "Why Research and Pricing Moved Online",
+        "key_points": [
+          "Explain how transparent inventory tools and instant trade-in estimators replaced hours of lot-walking.",
+          "Define digital retailing—online tools that let shoppers calculate payments and structure deals—in plain terms.",
+          "Concrete example: A commuter comparing three compact SUVs from their couch at 9 p.m. before ever contacting a salesperson."
+        ]
+      },
+      {
+        "heading": "The Friction Points Buyers Still Hate",
+        "key_points": [
+          "Address why skeptics are right that 100% online car buying is not for everyone.",
+          "Highlight the gap between online promises and in-store reality, such as re-entering credit data at the desk.",
+          "Concrete example: A buyer who completes a pre-qualification form online only to be handed a blank paper application upon arrival."
+        ]
+      },
+      {
+        "heading": "What Still Belongs in the Showroom",
+        "key_points": [
+          "Identify the irreplaceable physical moments: the test drive, seat comfort, visibility checks, and vehicle technology walkthroughs.",
+          "Explain why high-stakes purchases still require human reassurance and clear answers on warranties or service.",
+          "Concrete example: A family testing car-seat fit and cargo space in person before signing."
+        ]
+      },
+      {
+        "heading": "Your Playbook for This Quarter",
+        "key_points": [
+          "Move 1: Audit your website's payment calculator to ensure taxes and fees match your desking software.",
+          "Move 2: Train staff to pick up the conversation where the buyer's online profile left off, eliminating duplicate paperwork.",
+          "Move 3: Reposition the showroom visit around a curated 30-minute test drive and delivery experience."
+        ]
+      },
+      {
+        "heading": "The Bottom Line",
+        "key_points": [
+          "One memorable takeaway: Winning dealerships do not force buyers to choose between clicks and bricks; they connect the two seamlessly."
+        ]
+      }
+    ],
+    "keywords": [
+      "digital retailing",
+      "car-buying journey",
+      "automotive showroom",
+      "omnichannel dealership",
+      "hybrid car sales"
+    ],
+    "image_concept": {
+      "subject": "A couple standing beside a sleek, unbranded silver crossover SUV, examining the open rear cargo area.",
+      "setting": "A bright, modern, minimalist automotive showroom with clean concrete floors and large glass windows letting in natural daylight.",
+      "details": "A salesperson in smart-casual attire holds a tablet, while the couple gestures toward the trunk space; no logos, brand badges, or readable text are visible.",
+      "mood": "Calm, collaborative, and transparent."
+    }
+  },
+  "novelty": {
+    "score": 1,
+    "max_title_similarity": 0,
+    "compared_with": 0,
+    "regenerated": false
+  },
+  "simulate": {
+    "text_primary_fail": false,
+    "image_primary_fail": false,
+    "fatal": false
+  },
+  "calls": [
+    {
+      "purpose": "brief",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 12691,
+      "cost_usd": 0.016636,
+      "usage": {
+        "input_tokens": 906,
+        "output_tokens": 2037,
+        "thinking_tokens": 1180
+      },
+      "error": null
+    },
+    {
+      "purpose": "article",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 11601,
+      "cost_usd": 0.014985,
+      "usage": {
+        "input_tokens": 830,
+        "output_tokens": 1832,
+        "thinking_tokens": 966
+      },
+      "error": null
+    },
+    {
+      "purpose": "image",
+      "ok": true,
+      "model": "gemini-nano-banana-2.1",
+      "fallback_used": false,
+      "latency_ms": 12588,
+      "cost_usd": 0.038257,
+      "usage": {
+        "input_tokens": 190,
+        "output_tokens": 1703,
+        "image_tokens": 1120,
+        "thinking_tokens": 244
+      },
+      "error": null
+    }
+  ]
+}

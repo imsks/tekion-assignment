@@ -1,0 +1,262 @@
+{
+  "status": "success",
+  "run_id": "cg-20261117-130732-q9fze4",
+  "topic": "Ways dealerships can cut used-car reconditioning time",
+  "style": "listicle",
+  "title": "5 Ways to Cut Used-Car Reconditioning Time and Boost ROI",
+  "slug": "5-ways-to-cut-used-car-reconditioning-time-and-boost-roi",
+  "meta_description": "Cut used-car reconditioning time with five practical tactics. Lower holding costs, speed up front-line readiness, and protect your dealership's margins.",
+  "word_count": 542,
+  "image": {
+    "status": "generated",
+    "path": "outputs/cg-20261117-130732-q9fze4.jpg",
+    "model": "gemini-nano-banana-2.1",
+    "fallback_used": false,
+    "aspect_ratio": "16:9",
+    "prompt": "Create a editorial photography image to accompany an article titled \"5 Ways to Cut Used-Car Reconditioning Time and Boost ROI\".\nSubject: A technician in clean dark workwear inspecting the brakes of a silver sedan raised on a hydraulic lift.\nSetting: A bright, organized dealership service bay with clean concrete floors and neatly arranged toolboxes.\nDetails: Overhead LED shop lights reflecting off the car's polished hood, a rolling tool cart positioned within arm's reach, and a digital tablet resting on a nearby workbench.\nMood: Focused, efficient, and fast-paced.\nComposition: wide establishing shot.\nColor palette: soft pastels.\nLighting: moody low-key light.\nDo not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.",
+    "error": null
+  },
+  "diversity": {
+    "style_source": "requested",
+    "angle": "roi",
+    "hook": "analogy",
+    "audience": "practitioners who do the work every day",
+    "visual": {
+      "style": "editorial photography",
+      "composition": "wide establishing shot",
+      "palette": "soft pastels",
+      "lighting": "moody low-key light"
+    },
+    "history_considered": 7,
+    "related_runs": 0,
+    "novelty_score": 1,
+    "seed": 4185422467
+  },
+  "quality": {
+    "passed": true,
+    "revisions": 0,
+    "checks": [
+      {
+        "id": "word_count",
+        "passed": true,
+        "detail": "542 words (allowed 500-800)"
+      },
+      {
+        "id": "sections",
+        "passed": true,
+        "detail": "5 ## sections (min 3)"
+      },
+      {
+        "id": "paragraph_length",
+        "passed": true,
+        "detail": "0 paragraphs over 120 words"
+      },
+      {
+        "id": "banned_phrases",
+        "passed": true,
+        "detail": "none found"
+      },
+      {
+        "id": "no_links",
+        "passed": true,
+        "detail": "no links"
+      },
+      {
+        "id": "numbered_items",
+        "passed": true,
+        "detail": "5 numbered items (min 5)"
+      }
+    ],
+    "rounds": [
+      {
+        "draft": 0,
+        "word_count": 542,
+        "failed": []
+      }
+    ]
+  },
+  "warnings": [],
+  "models": {
+    "text": "gemini-4-hydrogen",
+    "image": "gemini-nano-banana-2.1",
+    "fallback_used": false
+  },
+  "cost_usd": 0.085,
+  "timings_ms": {
+    "brief": 12524,
+    "write": 13707,
+    "image": 15354,
+    "total": 41796
+  },
+  "error": null,
+  "generated_at": "2026-11-17T07:38:14.112Z",
+  "source": "api",
+  "request_id": "batch-20261117-130643-roclg3-05",
+  "request": {
+    "topic": "Ways dealerships can cut used-car reconditioning time",
+    "style_requested": "listicle",
+    "audience": "",
+    "tone": "",
+    "word_target": 650,
+    "image_aspect": "16:9"
+  },
+  "plan": {
+    "style": "listicle",
+    "style_source": "requested",
+    "angle": {
+      "id": "roi",
+      "text": "Through the lens of cost, ROI and business outcomes"
+    },
+    "hook": {
+      "id": "analogy",
+      "text": "Open with an unexpected analogy"
+    },
+    "audience": {
+      "id": "practitioners",
+      "text": "practitioners who do the work every day"
+    },
+    "tone": "Punchy, energetic and skimmable",
+    "visual": {
+      "style": "editorial photography",
+      "composition": "wide establishing shot",
+      "palette": "soft pastels",
+      "lighting": "moody low-key light"
+    },
+    "topic_key": "can car cut dealership reconditioning time used way",
+    "history_considered": 7,
+    "related_runs": 0,
+    "avoid_titles": [],
+    "seed": 4185422467
+  },
+  "brief": {
+    "title": "5 Ways to Cut Used-Car Reconditioning Time and Boost ROI",
+    "slug": "5-ways-to-cut-used-car-reconditioning-time-and-boost-roi",
+    "meta_description": "Cut used-car reconditioning time with five practical tactics. Lower holding costs, speed up front-line readiness, and protect your dealership's margins.",
+    "thesis": "Treating used-car reconditioning like a high-speed pit crew rather than a waiting room slashes holding costs and turns inventory faster.",
+    "sections": [
+      {
+        "heading": "Introduction",
+        "key_points": [
+          "Open with an unexpected analogy: A used car sitting in recon is like a race car stuck in the pit lane with the engine running—every second burns fuel and costs you the race.",
+          "Promise the list: Here are five practical ways dealerships can cut reconditioning time, lower daily holding costs, and get vehicles front-line ready faster."
+        ]
+      },
+      {
+        "heading": "## 1. Triage Vehicles at Appraisal",
+        "key_points": [
+          "**Spot deal-breakers before the car even hits the service bay.**",
+          "Waiting until a vehicle reaches the shop to discover major mechanical or cosmetic issues stalls the entire pipeline.",
+          "Train appraisers to flag high-cost repairs and sublet needs on the spot so parts can be ordered immediately."
+        ]
+      },
+      {
+        "heading": "## 2. Set Hard Time Limits per Stage",
+        "key_points": [
+          "**Cap every recon phase with a strict clock to eliminate silent bottlenecks.**",
+          "Without stage-specific deadlines, cars linger in detail or body work while managers assume someone else is handling it.",
+          "Assign clear time budgets—such as 24 hours for mechanical inspection and 48 hours for parts—to protect your daily holding cost."
+        ]
+      },
+      {
+        "heading": "## 3. Pre-Order Common Wear Parts",
+        "key_points": [
+          "**Stock high-turn parts in-house so technicians never wait on a delivery truck.**",
+          "A bay sitting idle for a set of brake pads or wiper blades destroys shop efficiency and delays retail listing.",
+          "Analyze your top-selling models and keep fast-moving wear items on the shelf to turn multi-day waits into same-day fixes."
+        ]
+      },
+      {
+        "heading": "## 4. Batch Sublet Work Strategically",
+        "key_points": [
+          "**Group paint, dent, and wheel repairs on fixed vendor days to cut transit time.**",
+          "Sending cars off-site one by one creates scheduling chaos and adds days of dead time.",
+          "Lock in dedicated weekly or bi-weekly vendor visits on your lot so multiple vehicles get repaired in a single sweep."
+        ]
+      },
+      {
+        "heading": "## 5. Automate Status Alerts for Managers",
+        "key_points": [
+          "**Replace manual walk-arounds with automated alerts when a car stalls.**",
+          "Chasing down technicians or checking clipboards wastes hours that could be spent closing deals.",
+          "Use simple digital tracking to ping the used-car manager the moment a vehicle exceeds its stage budget, keeping ROI front and center."
+        ]
+      },
+      {
+        "heading": "Wrap-Up",
+        "key_points": [
+          "Every day shaved off reconditioning directly protects your gross margin and frees up floorplan capital.",
+          "Pick one bottleneck from this list, set a timer this week, and watch your front-line readiness accelerate."
+        ]
+      }
+    ],
+    "keywords": [
+      "used-car reconditioning",
+      "dealership ROI",
+      "recon time",
+      "inventory turn",
+      "holding costs"
+    ],
+    "image_concept": {
+      "subject": "A technician in clean dark workwear inspecting the brakes of a silver sedan raised on a hydraulic lift.",
+      "setting": "A bright, organized dealership service bay with clean concrete floors and neatly arranged toolboxes.",
+      "details": "Overhead LED shop lights reflecting off the car's polished hood, a rolling tool cart positioned within arm's reach, and a digital tablet resting on a nearby workbench.",
+      "mood": "Focused, efficient, and fast-paced."
+    }
+  },
+  "novelty": {
+    "score": 1,
+    "max_title_similarity": 0,
+    "compared_with": 0,
+    "regenerated": false
+  },
+  "simulate": {
+    "text_primary_fail": false,
+    "image_primary_fail": false,
+    "fatal": false
+  },
+  "calls": [
+    {
+      "purpose": "brief",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 12524,
+      "cost_usd": 0.017679,
+      "usage": {
+        "input_tokens": 906,
+        "output_tokens": 2176,
+        "thinking_tokens": 1215
+      },
+      "error": null
+    },
+    {
+      "purpose": "article",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 13707,
+      "cost_usd": 0.022627,
+      "usage": {
+        "input_tokens": 920,
+        "output_tokens": 2833,
+        "thinking_tokens": 2122
+      },
+      "error": null
+    },
+    {
+      "purpose": "image",
+      "ok": true,
+      "model": "gemini-nano-banana-2.1",
+      "fallback_used": false,
+      "latency_ms": 15354,
+      "cost_usd": 0.044721,
+      "usage": {
+        "input_tokens": 179,
+        "output_tokens": 2567,
+        "image_tokens": 1120,
+        "thinking_tokens": 1011
+      },
+      "error": null
+    }
+  ]
+}

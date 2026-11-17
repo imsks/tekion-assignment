@@ -1,0 +1,265 @@
+{
+  "status": "success",
+  "run_id": "cg-20261117-130817-3vqspl",
+  "topic": "Using connected-car data to keep dealership customers coming back",
+  "style": "listicle",
+  "title": "5 Ways Connected-Car Data Actually Wins Back Skeptical Drivers",
+  "slug": "5-ways-connected-car-data-actually-wins-back-skeptical-drivers",
+  "meta_description": "Think connected-car data is just hype? See how dealerships use real-time vehicle insights across the customer journey to earn repeat service visits.",
+  "word_count": 575,
+  "image": {
+    "status": "generated",
+    "path": "outputs/cg-20261117-130817-3vqspl.jpg",
+    "model": "gemini-nano-banana-2.1",
+    "fallback_used": false,
+    "aspect_ratio": "16:9",
+    "prompt": "Create a minimal line art with a single accent color image to accompany an article titled \"5 Ways Connected-Car Data Actually Wins Back Skeptical Drivers\".\nSubject: A driver sitting in the driver's seat of a modern sedan, looking at a clean smartphone notification while a mechanic waves from a bright service bay.\nSetting: A sunlit dealership service drive-in lane.\nDetails: Soft morning light, a tablet resting on the mechanic's tool cart, and a freshly washed car hood.\nMood: Calm, transparent, and welcoming.\nComposition: wide establishing shot.\nColor palette: warm sunset oranges against deep blues.\nLighting: neon night glow.\nDo not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.",
+    "error": null
+  },
+  "diversity": {
+    "style_source": "auto",
+    "angle": "customer_journey",
+    "hook": "question",
+    "audience": "skeptics who doubt the hype",
+    "visual": {
+      "style": "minimal line art with a single accent color",
+      "composition": "wide establishing shot",
+      "palette": "warm sunset oranges against deep blues",
+      "lighting": "neon night glow"
+    },
+    "history_considered": 10,
+    "related_runs": 1,
+    "novelty_score": 0.8,
+    "seed": 110335333
+  },
+  "quality": {
+    "passed": true,
+    "revisions": 0,
+    "checks": [
+      {
+        "id": "word_count",
+        "passed": true,
+        "detail": "575 words (allowed 500-800)"
+      },
+      {
+        "id": "sections",
+        "passed": true,
+        "detail": "5 ## sections (min 3)"
+      },
+      {
+        "id": "paragraph_length",
+        "passed": true,
+        "detail": "0 paragraphs over 120 words"
+      },
+      {
+        "id": "banned_phrases",
+        "passed": true,
+        "detail": "none found"
+      },
+      {
+        "id": "no_links",
+        "passed": true,
+        "detail": "no links"
+      },
+      {
+        "id": "numbered_items",
+        "passed": true,
+        "detail": "5 numbered items (min 5)"
+      }
+    ],
+    "rounds": [
+      {
+        "draft": 0,
+        "word_count": 575,
+        "failed": []
+      }
+    ]
+  },
+  "warnings": [],
+  "models": {
+    "text": "gemini-4-hydrogen",
+    "image": "gemini-nano-banana-2.1",
+    "fallback_used": false
+  },
+  "cost_usd": 0.079,
+  "timings_ms": {
+    "brief": 15188,
+    "write": 32209,
+    "image": 16303,
+    "total": 63852
+  },
+  "error": null,
+  "generated_at": "2026-11-17T07:39:21.401Z",
+  "source": "api",
+  "request_id": "batch-20261117-130643-roclg3-07",
+  "request": {
+    "topic": "Using connected-car data to keep dealership customers coming back",
+    "style_requested": "auto",
+    "audience": "",
+    "tone": "",
+    "word_target": 650,
+    "image_aspect": "16:9"
+  },
+  "plan": {
+    "style": "listicle",
+    "style_source": "auto",
+    "angle": {
+      "id": "customer_journey",
+      "text": "Told through the customer's journey, step by step"
+    },
+    "hook": {
+      "id": "question",
+      "text": "Open with a provocative question"
+    },
+    "audience": {
+      "id": "skeptics",
+      "text": "skeptics who doubt the hype"
+    },
+    "tone": "Punchy, energetic and skimmable",
+    "visual": {
+      "style": "minimal line art with a single accent color",
+      "composition": "wide establishing shot",
+      "palette": "warm sunset oranges against deep blues",
+      "lighting": "neon night glow"
+    },
+    "topic_key": "back car coming connected customer data dealership keep using",
+    "history_considered": 10,
+    "related_runs": 1,
+    "avoid_titles": [
+      "From Guesswork to Telemetry: How Connected-Car Data Keeps Dealership Customers Returning"
+    ],
+    "seed": 110335333
+  },
+  "brief": {
+    "title": "5 Ways Connected-Car Data Actually Wins Back Skeptical Drivers",
+    "slug": "5-ways-connected-car-data-actually-wins-back-skeptical-drivers",
+    "meta_description": "Think connected-car data is just hype? See how dealerships use real-time vehicle insights across the customer journey to earn repeat service visits.",
+    "thesis": "When dealerships use connected-car data to solve real driver headaches at each stage of ownership, even skeptical customers come back.",
+    "sections": [
+      {
+        "heading": "Introduction",
+        "key_points": [
+          "Provocative question: Why would a driver who hates dealership upsells ever trust you with their car's live data?",
+          "Promise the list: Here are five practical ways connected-car data turns skeptical buyers into repeat service customers.",
+          "Frame the angle: We'll follow the customer's journey step by step, from the first drive-off to trade-in."
+        ]
+      },
+      {
+        "heading": "## 1. Catching early-stage issues before the check-engine light ruins their week",
+        "key_points": [
+          "**Takeaway: Proactive alerts beat reactive panic.**",
+          "Customer journey step: The first few thousand miles after driving off the lot.",
+          "Supporting detail: Instead of waiting for a breakdown, the dealership spots a battery dip or sensor fault and texts a simple, no-pressure heads-up."
+        ]
+      },
+      {
+        "heading": "## 2. Ditching generic mileage reminders for actual driving habits",
+        "key_points": [
+          "**Takeaway: Real-world wear beats arbitrary calendar dates.**",
+          "Customer journey step: Routine maintenance around month six.",
+          "Supporting detail: Heavy city traffic and short trips age oil faster than highway cruising, so tailored service invites feel helpful rather than pushy."
+        ]
+      },
+      {
+        "heading": "## 3. Making warranty and recall fixes painless instead of a surprise",
+        "key_points": [
+          "**Takeaway: Pre-ordered parts turn a hassle into a quick pit stop.**",
+          "Customer journey step: Mid-ownership when recalls or technical service bulletins pop up.",
+          "Supporting detail: Connected diagnostics let the service bay order the exact part before the customer even calls, cutting wait times in half."
+        ]
+      },
+      {
+        "heading": "## 4. Offering trade-in numbers based on real condition, not guesswork",
+        "key_points": [
+          "**Takeaway: Verified maintenance history earns a fairer, faster offer.**",
+          "Customer journey step: Year three or four, when the itch for a new car starts.",
+          "Supporting detail: Skeptics hate lowball appraisals; showing a data-backed health report proves their car's value and builds instant trust."
+        ]
+      },
+      {
+        "heading": "## 5. Timing the next-car conversation when their current ride hits peak equity",
+        "key_points": [
+          "**Takeaway: Relevant timing beats random sales blasts.**",
+          "Customer journey step: The transition to their next vehicle.",
+          "Supporting detail: Combining mileage, warranty expiration, and market demand lets dealers reach out only when upgrading actually makes financial sense."
+        ]
+      },
+      {
+        "heading": "Wrap-up",
+        "key_points": [
+          "Reinforce the core message: Connected-car data isn't magic, and it won't fix bad service.",
+          "Final punchy thought: Use it to respect the driver's time at every step, and they'll keep coming back."
+        ]
+      }
+    ],
+    "keywords": [
+      "connected-car data",
+      "dealership customer retention",
+      "automotive service marketing",
+      "customer journey",
+      "predictive maintenance"
+    ],
+    "image_concept": {
+      "subject": "A driver sitting in the driver's seat of a modern sedan, looking at a clean smartphone notification while a mechanic waves from a bright service bay.",
+      "setting": "A sunlit dealership service drive-in lane.",
+      "details": "Soft morning light, a tablet resting on the mechanic's tool cart, and a freshly washed car hood.",
+      "mood": "Calm, transparent, and welcoming."
+    }
+  },
+  "novelty": {
+    "score": 0.8,
+    "max_title_similarity": 0.2,
+    "compared_with": 1,
+    "regenerated": false
+  },
+  "simulate": {
+    "text_primary_fail": false,
+    "image_primary_fail": false,
+    "fatal": false
+  },
+  "calls": [
+    {
+      "purpose": "brief",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 15188,
+      "cost_usd": 0.017937,
+      "usage": {
+        "input_tokens": 943,
+        "output_tokens": 2203,
+        "thinking_tokens": 1241
+      },
+      "error": null
+    },
+    {
+      "purpose": "article",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 32209,
+      "cost_usd": 0.014322,
+      "usage": {
+        "input_tokens": 933,
+        "output_tokens": 1723,
+        "thinking_tokens": 956
+      },
+      "error": null
+    },
+    {
+      "purpose": "image",
+      "ok": true,
+      "model": "gemini-nano-banana-2.1",
+      "fallback_used": false,
+      "latency_ms": 16303,
+      "cost_usd": 0.046777,
+      "usage": {
+        "input_tokens": 175,
+        "output_tokens": 2842,
+        "image_tokens": 1120,
+        "thinking_tokens": 1342
+      },
+      "error": null
+    }
+  ]
+}

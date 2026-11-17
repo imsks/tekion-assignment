@@ -1,0 +1,269 @@
+{
+  "status": "success",
+  "run_id": "cg-20261117-130644-zf5b8v",
+  "topic": "How to launch a digital retailing program at a car dealership",
+  "style": "guide",
+  "title": "How to Launch Digital Retailing Without Breaking Your Dealership",
+  "slug": "how-to-launch-digital-retailing-without-breaking-your-dealership",
+  "meta_description": "Launch a digital retailing program that actually closes deals. Learn why fixing your pricing and F&I handoff matters more than buying new software.",
+  "word_count": 674,
+  "image": {
+    "status": "generated",
+    "path": "outputs/cg-20261117-130644-zf5b8v.jpg",
+    "model": "gemini-nano-banana-2.1",
+    "fallback_used": false,
+    "aspect_ratio": "16:9",
+    "prompt": "Create a cinematic still with shallow depth of field image to accompany an article titled \"How to Launch Digital Retailing Without Breaking Your Dealership\".\nSubject: A dealership general manager and an F&I director reviewing a tablet together beside a parked sedan.\nSetting: A clean, modern car dealership showroom floor with natural daylight streaming through tall glass windows.\nDetails: The tablet displays a clean vehicle deal summary interface without readable text, while a physical key fob rests on a nearby sleek wooden desk.\nMood: Focused, collaborative, and forward-looking.\nComposition: rule-of-thirds framing with generous negative space.\nColor palette: earthy greens and sand.\nLighting: soft diffused studio light.\nDo not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.",
+    "error": null
+  },
+  "diversity": {
+    "style_source": "requested",
+    "angle": "contrarian",
+    "hook": "scenario",
+    "audience": "leaders planning for the next three years",
+    "visual": {
+      "style": "cinematic still with shallow depth of field",
+      "composition": "rule-of-thirds framing with generous negative space",
+      "palette": "earthy greens and sand",
+      "lighting": "soft diffused studio light"
+    },
+    "history_considered": 4,
+    "related_runs": 0,
+    "novelty_score": 1,
+    "seed": 723666355
+  },
+  "quality": {
+    "passed": true,
+    "revisions": 0,
+    "checks": [
+      {
+        "id": "word_count",
+        "passed": true,
+        "detail": "674 words (allowed 500-800)"
+      },
+      {
+        "id": "sections",
+        "passed": true,
+        "detail": "8 ## sections (min 3)"
+      },
+      {
+        "id": "paragraph_length",
+        "passed": true,
+        "detail": "0 paragraphs over 120 words"
+      },
+      {
+        "id": "banned_phrases",
+        "passed": true,
+        "detail": "none found"
+      },
+      {
+        "id": "no_links",
+        "passed": true,
+        "detail": "no links"
+      },
+      {
+        "id": "steps",
+        "passed": true,
+        "detail": "5 \"Step N\" sections (min 5)"
+      }
+    ],
+    "rounds": [
+      {
+        "draft": 0,
+        "word_count": 674,
+        "failed": []
+      }
+    ]
+  },
+  "warnings": [],
+  "models": {
+    "text": "gemini-4-hydrogen",
+    "image": "gemini-nano-banana-2.1",
+    "fallback_used": false
+  },
+  "cost_usd": 0.0816,
+  "timings_ms": {
+    "brief": 13268,
+    "write": 15541,
+    "image": 19135,
+    "total": 48201
+  },
+  "error": null,
+  "generated_at": "2026-11-17T07:37:32.214Z",
+  "source": "api",
+  "request_id": "batch-20261117-130643-roclg3-02",
+  "request": {
+    "topic": "How to launch a digital retailing program at a car dealership",
+    "style_requested": "guide",
+    "audience": "",
+    "tone": "",
+    "word_target": 650,
+    "image_aspect": "16:9"
+  },
+  "plan": {
+    "style": "guide",
+    "style_source": "requested",
+    "angle": {
+      "id": "contrarian",
+      "text": "A contrarian take that challenges a popular assumption"
+    },
+    "hook": {
+      "id": "scenario",
+      "text": "Open with a short, vivid scenario"
+    },
+    "audience": {
+      "id": "planners",
+      "text": "leaders planning for the next three years"
+    },
+    "tone": "Practical, direct, second person",
+    "visual": {
+      "style": "cinematic still with shallow depth of field",
+      "composition": "rule-of-thirds framing with generous negative space",
+      "palette": "earthy greens and sand",
+      "lighting": "soft diffused studio light"
+    },
+    "topic_key": "car dealership digital launch program retailing",
+    "history_considered": 4,
+    "related_runs": 0,
+    "avoid_titles": [],
+    "seed": 723666355
+  },
+  "brief": {
+    "title": "How to Launch Digital Retailing Without Breaking Your Dealership",
+    "slug": "how-to-launch-digital-retailing-without-breaking-your-dealership",
+    "meta_description": "Launch a digital retailing program that actually closes deals. Learn why fixing your pricing and F&I handoff matters more than buying new software.",
+    "thesis": "Successful digital retailing is not about buying the flashiest online checkout tool; it is about aligning your pricing, inventory data, and F&I handoff so online numbers match in-store reality.",
+    "sections": [
+      {
+        "heading": "Before you start",
+        "key_points": [
+          "Open with a vivid scenario: a customer spends 45 minutes structuring a deal online at midnight, only to walk out the next day when the desk manager presents a different monthly payment.",
+          "Clarify that this guide is for dealership leaders planning a three-year omnichannel roadmap who want higher close rates, not just more leads.",
+          "Prerequisite: audit your current DMS and CRM data hygiene to ensure real-time inventory and accurate VIN-level pricing.",
+          "Prerequisite: secure buy-in from your F&I director and desk managers before signing any software contract."
+        ]
+      },
+      {
+        "heading": "Step 1: Standardize your pricing and fees across every channel",
+        "key_points": [
+          "Eliminate hidden dealer add-ons and inconsistent doc fees between your website, third-party listings, and showroom desk.",
+          "Publish transparent, penny-exact out-the-door numbers online so your sales team never has to walk back a digital quote."
+        ]
+      },
+      {
+        "heading": "Step 2: Map the exact handoff from online cart to F&I",
+        "key_points": [
+          "Define who owns a digital deal the moment a customer submits a credit application or trade-in appraisal.",
+          "Build a single-screen workflow in your CRM so the BDC, salesperson, and F&I manager see the exact same deal structure without re-keying data."
+        ]
+      },
+      {
+        "heading": "Step 3: Select software that integrates with your DMS, not against it",
+        "key_points": [
+          "Challenge the assumption that you need an all-in-one platform; prioritize bi-directional DMS integration over flashy consumer interfaces.",
+          "Test the tool with your own staff posing as buyers to verify that taxes, rebates, and lender rates calculate accurately."
+        ]
+      },
+      {
+        "heading": "Step 4: Train your desk and F&I teams on consultative validation",
+        "key_points": [
+          "Replace traditional negotiation scripts with a validation process that honors the customer's online work.",
+          "Role-play common scenarios, such as adjusting a trade-in value after a physical inspection, without eroding trust."
+        ]
+      },
+      {
+        "heading": "Step 5: Pilot with one rooftop or brand before scaling",
+        "key_points": [
+          "Run a 30-day pilot with a dedicated champion on the floor to catch workflow bottlenecks early.",
+          "Track deal-completion time, online-to-showroom conversion, and gross profit per unit against your traditional baseline."
+        ]
+      },
+      {
+        "heading": "Common pitfalls",
+        "key_points": [
+          "Treating digital retailing as a lead-generation widget rather than a true transaction tool.",
+          "Allowing desk managers to override online payments, which destroys customer trust and tanks CSI scores.",
+          "Ignoring trade-in valuation transparency, causing deals to stall when the car arrives for appraisal."
+        ]
+      },
+      {
+        "heading": "Launch checklist",
+        "key_points": [
+          "DMS and CRM bi-directional sync tested with live VINs.",
+          "Out-the-door pricing, taxes, and fees verified for accuracy.",
+          "F&I and desk managers trained on the digital handoff protocol.",
+          "30-day pilot KPIs defined and assigned to a single owner."
+        ]
+      }
+    ],
+    "keywords": [
+      "digital retailing",
+      "car dealership",
+      "automotive omnichannel",
+      "F&I handoff",
+      "dealership leadership"
+    ],
+    "image_concept": {
+      "subject": "A dealership general manager and an F&I director reviewing a tablet together beside a parked sedan",
+      "setting": "A clean, modern car dealership showroom floor with natural daylight streaming through tall glass windows",
+      "details": "The tablet displays a clean vehicle deal summary interface without readable text, while a physical key fob rests on a nearby sleek wooden desk",
+      "mood": "Focused, collaborative, and forward-looking"
+    }
+  },
+  "novelty": {
+    "score": 1,
+    "max_title_similarity": 0,
+    "compared_with": 0,
+    "regenerated": false
+  },
+  "simulate": {
+    "text_primary_fail": false,
+    "image_primary_fail": false,
+    "fatal": false
+  },
+  "calls": [
+    {
+      "purpose": "brief",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 13268,
+      "cost_usd": 0.015149,
+      "usage": {
+        "input_tokens": 914,
+        "output_tokens": 1837,
+        "thinking_tokens": 771
+      },
+      "error": null
+    },
+    {
+      "purpose": "article",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 15541,
+      "cost_usd": 0.021152,
+      "usage": {
+        "input_tokens": 1011,
+        "output_tokens": 2618,
+        "thinking_tokens": 1721
+      },
+      "error": null
+    },
+    {
+      "purpose": "image",
+      "ok": true,
+      "model": "gemini-nano-banana-2.1",
+      "fallback_used": false,
+      "latency_ms": 19135,
+      "cost_usd": 0.04527,
+      "usage": {
+        "input_tokens": 180,
+        "output_tokens": 2640,
+        "image_tokens": 1120,
+        "thinking_tokens": 1098
+      },
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "status": "success",
+  "run_id": "cg-20261117-130732-8wzei6",
+  "topic": "How electric vehicles will change dealership service revenue",
+  "style": "trend_analysis",
+  "title": "How Electric Vehicles Will Reshape Dealership Service Revenue",
+  "slug": "how-electric-vehicles-will-reshape-dealership-service-revenue",
+  "meta_description": "Explore how EVs are shifting dealership service revenue, the key drivers, stakeholder trade-offs, and what decision-makers should watch next.",
+  "word_count": 546,
+  "image": {
+    "status": "generated",
+    "path": "outputs/cg-20261117-130732-8wzei6.jpg",
+    "model": "gemini-nano-banana-2.1",
+    "fallback_used": false,
+    "aspect_ratio": "16:9",
+    "prompt": "Create a clean flat vector illustration image to accompany an article titled \"How Electric Vehicles Will Reshape Dealership Service Revenue\".\nSubject: A service technician in dark workwear inspecting an electric vehicle on a hydraulic lift using a handheld diagnostic tablet.\nSetting: A clean, brightly lit modern automotive service bay with high-voltage safety cones placed around the vehicle.\nDetails: An orange high-voltage cable is visible beneath the raised chassis, alongside a mobile charging unit and a neatly organized tool chest.\nMood: Focused, clinical, and forward-looking.\nComposition: low-angle hero shot.\nColor palette: warm sunset oranges against deep blues.\nLighting: moody low-key light.\nDo not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.",
+    "error": null
+  },
+  "diversity": {
+    "style_source": "requested",
+    "angle": "risks",
+    "hook": "mini_story",
+    "audience": "decision-makers weighing whether to invest",
+    "visual": {
+      "style": "clean flat vector illustration",
+      "composition": "low-angle hero shot",
+      "palette": "warm sunset oranges against deep blues",
+      "lighting": "moody low-key light"
+    },
+    "history_considered": 7,
+    "related_runs": 0,
+    "novelty_score": 1,
+    "seed": 4003450851
+  },
+  "quality": {
+    "passed": true,
+    "revisions": 0,
+    "checks": [
+      {
+        "id": "word_count",
+        "passed": true,
+        "detail": "546 words (allowed 500-800)"
+      },
+      {
+        "id": "sections",
+        "passed": true,
+        "detail": "5 ## sections (min 3)"
+      },
+      {
+        "id": "paragraph_length",
+        "passed": true,
+        "detail": "0 paragraphs over 120 words"
+      },
+      {
+        "id": "banned_phrases",
+        "passed": true,
+        "detail": "none found"
+      },
+      {
+        "id": "no_links",
+        "passed": true,
+        "detail": "no links"
+      },
+      {
+        "id": "required_section",
+        "passed": true,
+        "detail": "present"
+      }
+    ],
+    "rounds": [
+      {
+        "draft": 0,
+        "word_count": 546,
+        "failed": []
+      }
+    ]
+  },
+  "warnings": [],
+  "models": {
+    "text": "gemini-4-hydrogen",
+    "image": "gemini-nano-banana-2.1",
+    "fallback_used": false
+  },
+  "cost_usd": 0.0743,
+  "timings_ms": {
+    "brief": 12997,
+    "write": 14764,
+    "image": 16396,
+    "total": 44378
+  },
+  "error": null,
+  "generated_at": "2026-11-17T07:38:16.681Z",
+  "source": "api",
+  "request_id": "batch-20261117-130643-roclg3-04",
+  "request": {
+    "topic": "How electric vehicles will change dealership service revenue",
+    "style_requested": "trend_analysis",
+    "audience": "",
+    "tone": "",
+    "word_target": 650,
+    "image_aspect": "16:9"
+  },
+  "plan": {
+    "style": "trend_analysis",
+    "style_source": "requested",
+    "angle": {
+      "id": "risks",
+      "text": "Risks, trade-offs and how to manage them"
+    },
+    "hook": {
+      "id": "mini_story",
+      "text": "Open with a two-sentence story about one person"
+    },
+    "audience": {
+      "id": "decision_makers",
+      "text": "decision-makers weighing whether to invest"
+    },
+    "tone": "Analytical and measured, with hedged forecasts",
+    "visual": {
+      "style": "clean flat vector illustration",
+      "composition": "low-angle hero shot",
+      "palette": "warm sunset oranges against deep blues",
+      "lighting": "moody low-key light"
+    },
+    "topic_key": "change dealership electric revenue service vehicle",
+    "history_considered": 7,
+    "related_runs": 0,
+    "avoid_titles": [],
+    "seed": 4003450851
+  },
+  "brief": {
+    "title": "How Electric Vehicles Will Reshape Dealership Service Revenue",
+    "slug": "how-electric-vehicles-will-reshape-dealership-service-revenue",
+    "meta_description": "Explore how EVs are shifting dealership service revenue, the key drivers, stakeholder trade-offs, and what decision-makers should watch next.",
+    "thesis": "As electric vehicles reduce routine mechanical maintenance, dealerships face a structural shift in service revenue that requires careful capital allocation and workforce adaptation.",
+    "sections": [
+      {
+        "heading": "Where Dealership Service Revenue Stands Today",
+        "key_points": [
+          "Open with a two-sentence story about a service director reviewing a bay schedule where traditional oil changes are steadily giving way to software diagnostics.",
+          "Fixed operations—service and parts—remain a primary profit center for most dealerships, historically insulated by recurring internal combustion engine maintenance.",
+          "EV adoption is currently uneven across regions, meaning many service departments are managing a hybrid workload of legacy vehicles and early electric models."
+        ]
+      },
+      {
+        "heading": "The Three Main Drivers Behind the Shift",
+        "key_points": [
+          "Fewer moving parts: Electric powertrains eliminate oil changes, spark plugs, and exhaust repairs, reducing high-frequency, predictable service visits.",
+          "Higher-value, specialized repairs: While routine visits drop, battery diagnostics, thermal management, and high-voltage component replacements require specialized equipment and carry higher ticket potential.",
+          "Software-defined vehicles: Over-the-air updates allow manufacturers to resolve certain issues remotely, potentially bypassing the dealership service bay altogether."
+        ]
+      },
+      {
+        "heading": "Implications for Different Stakeholders",
+        "key_points": [
+          "Dealership owners face a capital trade-off between investing heavily in high-voltage tooling and charging infrastructure now versus waiting for local EV volume to mature.",
+          "Service technicians must transition from mechanical repair to electrical diagnostics, creating a training bottleneck and retention risk for shops that delay upskilling.",
+          "Automakers and independent repair shops are competing more directly for software-driven maintenance and tire or suspension wear, which remains high due to heavier EV battery weights."
+        ]
+      },
+      {
+        "heading": "What to Watch Over the Next 12 to 24 Months",
+        "key_points": [
+          "Monitor warranty repair trends and how manufacturers structure reimbursement rates for complex battery and software diagnostics.",
+          "Watch whether consumer EV adoption accelerates in non-urban markets, which will dictate when regional dealerships hit a tipping point in bay utilization.",
+          "Track the emergence of subscription-based maintenance packages and how dealerships price tire, brake, and alignment services to offset lost engine work."
+        ]
+      },
+      {
+        "heading": "The Bottom Line",
+        "key_points": [
+          "EVs will not eliminate dealership service revenue overnight, but they will compress traditional high-margin maintenance.",
+          "Decision-makers should pace infrastructure investments to match local fleet mix while prioritizing technician certification and retention."
+        ]
+      }
+    ],
+    "keywords": [
+      "EV dealership service revenue",
+      "electric vehicle maintenance",
+      "automotive fixed operations",
+      "dealership investment risks",
+      "EV technician training"
+    ],
+    "image_concept": {
+      "subject": "A service technician in dark workwear inspecting an electric vehicle on a hydraulic lift using a handheld diagnostic tablet.",
+      "setting": "A clean, brightly lit modern automotive service bay with high-voltage safety cones placed around the vehicle.",
+      "details": "An orange high-voltage cable is visible beneath the raised chassis, alongside a mobile charging unit and a neatly organized tool chest.",
+      "mood": "Focused, clinical, and forward-looking."
+    }
+  },
+  "novelty": {
+    "score": 1,
+    "max_title_similarity": 0,
+    "compared_with": 0,
+    "regenerated": false
+  },
+  "simulate": {
+    "text_primary_fail": false,
+    "image_primary_fail": false,
+    "fatal": false
+  },
+  "calls": [
+    {
+      "purpose": "brief",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 12997,
+      "cost_usd": 0.010759,
+      "usage": {
+        "input_tokens": 928,
+        "output_tokens": 1249,
+        "thinking_tokens": 426
+      },
+      "error": null
+    },
+    {
+      "purpose": "article",
+      "ok": true,
+      "model": "gemini-4-hydrogen",
+      "fallback_used": false,
+      "latency_ms": 14764,
+      "cost_usd": 0.020168,
+      "usage": {
+        "input_tokens": 860,
+        "output_tokens": 2517,
+        "thinking_tokens": 1812
+      },
+      "error": null
+    },
+    {
+      "purpose": "image",
+      "ok": true,
+      "model": "gemini-nano-banana-2.1",
+      "fallback_used": false,
+      "latency_ms": 16396,
+      "cost_usd": 0.043369,
+      "usage": {
+        "input_tokens": 178,
+        "output_tokens": 2387,
+        "image_tokens": 1120,
+        "thinking_tokens": 905
+      },
+      "error": null
+    }
+  ]
+}
