@@ -1,0 +1,108 @@
+{
+  "id": "U8pOSL3CVNUKpdfY",
+  "name": "CG · 04 Error Handler",
+  "description": "Shared error workflow: logs any failed production execution of the content workflows to the content_errors Data Table.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "ab251581-25e2-495f-8838-d4b49b5ec686",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const execution = $json.execution || {};\nconst failedWorkflow = $json.workflow || {};\nconst error = execution.error || ($json.trigger && $json.trigger.error) || {};\nreturn {\n  json: {\n    workflow_id: failedWorkflow.id || null,\n    workflow_name: failedWorkflow.name || null,\n    execution_id: execution.id ? String(execution.id) : null,\n    execution_url: execution.url || null,\n    mode: execution.mode || 'trigger',\n    last_node: execution.lastNodeExecuted || (error.node && error.node.name) || null,\n    error_message: String(error.message || 'Unknown error').slice(0, 1000),\n    error_detail: String(error.description || error.stack || '').slice(0, 2000)\n  }\n};"
+      },
+      "id": "2c789e10-4952-4e6c-91a2-799df59961c5",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "content_errors"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {}
+      },
+      "id": "97bb6658-06e3-45f4-bd65-8b0bcd313d53",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CG · 04 Error Handler\nSet as the **error workflow** of the intake, pipeline and gateway workflows. n8n runs it whenever one of their production executions fails unexpectedly (model failures are handled inside the pipeline and do not land here).\n\nEach failure becomes a row in **content_errors** with a link to the failed execution. Add a Slack or email node after **Format Error** to get alerts.",
+        "height": 224,
+        "width": 688,
+        "color": 7
+      },
+      "id": "b37864f8-cca0-4bfa-bf44-bc34130edd13",
+      "name": "Sticky Note 1026080e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -240
+      ]
+    }
+  ],
+  "connections": {
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

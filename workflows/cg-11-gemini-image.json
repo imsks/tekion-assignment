@@ -1,0 +1,327 @@
+{
+  "id": "50Ob8wBaUDmbATBs",
+  "name": "CG · 11 Gemini Image",
+  "description": "Gateway sub-workflow for Gemini image generation: primary model with retry, fallback model, aspect ratio and size, deadline-aware timeouts, cost tracking. Returns the image as binary; never throws on model failure.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "87902269-f26b-4d0c-8df1-2a8f4343b361",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "b3cc559d-0a7f-4e30-85a7-f9212eca7a1c",
+      "name": "Prepare Image Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const input = $json;\nconst models = input.models || {};\nif (!models.primary) {\n  throw new Error('Gemini Image gateway: models.primary is required');\n}\nconst base = 'https://generativelanguage.googleapis.com/v1beta/models/';\nconst imageConfig = { aspectRatio: input.aspect_ratio || '16:9' };\nif (input.image_size) {\n  imageConfig.imageSize = input.image_size;\n}\nconst body = {\n  contents: [{ role: 'user', parts: [{ text: String(input.prompt || '') }] }],\n  generationConfig: { responseModalities: ['IMAGE'], imageConfig }\n};\nconst fallbackModel = models.fallback || models.primary;\n// Fault injection: aim the primary call at a model id that does not exist, so the\n// real API fails and the fallback path runs exactly as it would during an outage.\nconst primaryTarget = input.simulate_primary_fail ? models.primary + '-simulated-outage' : models.primary;\nconst now = Date.now();\nreturn {\n  json: {\n    purpose: input.purpose || 'image',\n    body,\n    primary: { model: models.primary, url: base + primaryTarget + ':generateContent' },\n    fallback: { model: fallbackModel, url: base + fallbackModel + ':generateContent' },\n    timeout_ms: Math.min(Math.max(Number(input.timeout_ms) || 90000, 5000), 240000),\n    deadline_at: Number(input.deadline_at) || now + 280000,\n    pricing: input.pricing || {},\n    simulated_failure: Boolean(input.simulate_primary_fail),\n    started_at: now,\n    passthrough: input.passthrough === undefined ? null : input.passthrough\n  }\n};"
+      }
+    },
+    {
+      "id": "a40d441e-f709-48c8-a3d5-c4e9cea61413",
+      "name": "Call Primary Image Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.primary.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": "={{ Math.max(3000, Math.min($json.timeout_ms, $json.deadline_at - $now.toMillis() - 2000)) }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CgGeminiApiKey01",
+          "name": "Gemini API"
+        }
+      }
+    },
+    {
+      "id": "915d4729-124d-46a1-ab31-be696990811a",
+      "name": "Parse Primary Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ATTEMPT = 'primary';\nconst prep = $('Prepare Image Request').first().json;\nconst res = $json || {};\nconst zero = { input_tokens: 0, output_tokens: 0, image_tokens: 0, thinking_tokens: 0 };\nconst base = { attempt: ATTEMPT, model: prep[ATTEMPT].model, ok: false, finish_reason: null, usage: zero, error: null };\n\n// HTTP failures arrive here through the node's error output, after its retry.\nif (!res.candidates && res.error !== undefined) {\n  const raw = res.error;\n  const details = res.details || {};\n  let message = typeof raw === 'string' ? raw : String((raw && raw.message) || JSON.stringify(raw));\n  const description = details.description || (raw && raw.description);\n  if (description && description !== message) message += ' | ' + description;\n  const causeMessage = raw && raw.cause && raw.cause.message ? String(raw.cause.message) : '';\n  const codeMatch = /^(\\d{3})\\b/.exec(causeMessage) || /^(\\d{3})\\b/.exec(message);\n  const status = details.httpCode || (raw && raw.httpCode) || (codeMatch && codeMatch[1]) || null;\n  const type = /timeout|ETIMEDOUT|ECONNABORTED/i.test(message + ' ' + causeMessage) ? 'timeout' : 'http_error';\n  return { json: { ...base, error: { type, http_status: status ? Number(status) : null, message: message.slice(0, 600) } } };\n}\n\nconst candidate = (res.candidates || [])[0] || {};\nconst parts = (candidate.content && candidate.content.parts) || [];\n// Thinking image models can emit draft images marked as thoughts; keep the last final one.\nconst imageParts = parts.filter(p => (p.inlineData || p.inline_data) && !p.thought);\nconst imagePart = imageParts[imageParts.length - 1];\nconst finishReason = candidate.finishReason || (res.promptFeedback && res.promptFeedback.blockReason) || 'NO_CANDIDATE';\nconst meta = res.usageMetadata || {};\nconst imageTokens = (meta.candidatesTokensDetails || [])\n  .filter(d => d.modality === 'IMAGE')\n  .reduce((sum, d) => sum + (d.tokenCount || 0), 0);\nconst usage = {\n  input_tokens: meta.promptTokenCount || 0,\n  output_tokens: (meta.candidatesTokenCount || 0) + (meta.thoughtsTokenCount || 0),\n  image_tokens: imageTokens,\n  thinking_tokens: meta.thoughtsTokenCount || 0\n};\nconst out = { ...base, finish_reason: finishReason, usage };\nif (!imagePart) {\n  const note = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join(' ').slice(0, 300);\n  return { json: { ...out, error: { type: 'no_image', message: 'Model returned no image (finishReason ' + finishReason + ')' + (note ? ': ' + note : '') } } };\n}\nconst inline = imagePart.inlineData || imagePart.inline_data;\nconst mimeType = inline.mimeType || inline.mime_type || 'image/png';\nconst subtype = mimeType.split('/')[1] || 'png';\nconst extension = subtype === 'jpeg' ? 'jpg' : subtype;\nreturn {\n  json: { ...out, ok: true, mime_type: mimeType, file_extension: extension, bytes: Math.round(inline.data.length * 3 / 4) },\n  binary: { image: { data: inline.data, mimeType, fileName: 'image.' + extension, fileExtension: extension } }\n};"
+      }
+    },
+    {
+      "id": "d930bdf4-2646-412e-b8c5-532f274268d8",
+      "name": "Primary Image OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8a6cb126-f7d6-490f-ad20-8293a9f3b4a6",
+      "name": "Return Image Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const prep = $('Prepare Image Request').first().json;\nconst finalItem = $input.first();\nconst final = finalItem.json;\nconst primary = $('Parse Primary Image').first().json;\nconst attempts = (final.attempt === 'fallback' ? [primary, final] : [final]).map(a => {\n  const price = prep.pricing[a.model] || null;\n  const u = a.usage;\n  const textTokens = Math.max(0, u.output_tokens - u.image_tokens);\n  const cost = price\n    ? (u.input_tokens * price.input + textTokens * price.output + u.image_tokens * (price.output_image || price.output)) / 1e6\n    : 0;\n  return { attempt: a.attempt, model: a.model, ok: a.ok, usage: u, cost_usd: Number(cost.toFixed(6)), error: a.error };\n});\nconst usage = { input_tokens: 0, output_tokens: 0, image_tokens: 0, thinking_tokens: 0 };\nfor (const a of attempts) {\n  usage.input_tokens += a.usage.input_tokens;\n  usage.output_tokens += a.usage.output_tokens;\n  usage.image_tokens += a.usage.image_tokens;\n  usage.thinking_tokens += a.usage.thinking_tokens;\n}\nconst ok = final.ok === true;\nconst result = {\n  json: {\n    ok,\n    purpose: prep.purpose,\n    model: ok ? final.model : null,\n    mime_type: ok ? final.mime_type : null,\n    file_extension: ok ? final.file_extension : null,\n    bytes: ok ? final.bytes : 0,\n    fallback_used: final.attempt === 'fallback',\n    finish_reason: final.finish_reason,\n    latency_ms: Date.now() - prep.started_at,\n    usage,\n    cost_usd: Number(attempts.reduce((sum, a) => sum + a.cost_usd, 0).toFixed(6)),\n    attempts,\n    error: ok ? null : attempts.map(a => a.attempt + ' ' + a.model + ': ' + (a.error ? a.error.message : 'unknown error')).join(' | '),\n    simulated_failure: prep.simulated_failure,\n    passthrough: prep.passthrough\n  }\n};\nif (ok && finalItem.binary) {\n  result.binary = finalItem.binary;\n}\nreturn [result];"
+      }
+    },
+    {
+      "id": "91b19274-d70c-41d2-a5b9-ff6bf67ebdfe",
+      "name": "Call Fallback Image Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        420
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $(\"Prepare Image Request\").first().json.fallback.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($(\"Prepare Image Request\").first().json.body) }}",
+        "options": {
+          "timeout": "={{ Math.max(3000, Math.min($(\"Prepare Image Request\").first().json.timeout_ms, $(\"Prepare Image Request\").first().json.deadline_at - $now.toMillis() - 2000)) }}"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CgGeminiApiKey01",
+          "name": "Gemini API"
+        }
+      }
+    },
+    {
+      "id": "84cd7a27-d4f5-4392-936e-0877969d87fa",
+      "name": "Parse Fallback Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ATTEMPT = 'fallback';\nconst prep = $('Prepare Image Request').first().json;\nconst res = $json || {};\nconst zero = { input_tokens: 0, output_tokens: 0, image_tokens: 0, thinking_tokens: 0 };\nconst base = { attempt: ATTEMPT, model: prep[ATTEMPT].model, ok: false, finish_reason: null, usage: zero, error: null };\n\n// HTTP failures arrive here through the node's error output, after its retry.\nif (!res.candidates && res.error !== undefined) {\n  const raw = res.error;\n  const details = res.details || {};\n  let message = typeof raw === 'string' ? raw : String((raw && raw.message) || JSON.stringify(raw));\n  const description = details.description || (raw && raw.description);\n  if (description && description !== message) message += ' | ' + description;\n  const causeMessage = raw && raw.cause && raw.cause.message ? String(raw.cause.message) : '';\n  const codeMatch = /^(\\d{3})\\b/.exec(causeMessage) || /^(\\d{3})\\b/.exec(message);\n  const status = details.httpCode || (raw && raw.httpCode) || (codeMatch && codeMatch[1]) || null;\n  const type = /timeout|ETIMEDOUT|ECONNABORTED/i.test(message + ' ' + causeMessage) ? 'timeout' : 'http_error';\n  return { json: { ...base, error: { type, http_status: status ? Number(status) : null, message: message.slice(0, 600) } } };\n}\n\nconst candidate = (res.candidates || [])[0] || {};\nconst parts = (candidate.content && candidate.content.parts) || [];\n// Thinking image models can emit draft images marked as thoughts; keep the last final one.\nconst imageParts = parts.filter(p => (p.inlineData || p.inline_data) && !p.thought);\nconst imagePart = imageParts[imageParts.length - 1];\nconst finishReason = candidate.finishReason || (res.promptFeedback && res.promptFeedback.blockReason) || 'NO_CANDIDATE';\nconst meta = res.usageMetadata || {};\nconst imageTokens = (meta.candidatesTokensDetails || [])\n  .filter(d => d.modality === 'IMAGE')\n  .reduce((sum, d) => sum + (d.tokenCount || 0), 0);\nconst usage = {\n  input_tokens: meta.promptTokenCount || 0,\n  output_tokens: (meta.candidatesTokenCount || 0) + (meta.thoughtsTokenCount || 0),\n  image_tokens: imageTokens,\n  thinking_tokens: meta.thoughtsTokenCount || 0\n};\nconst out = { ...base, finish_reason: finishReason, usage };\nif (!imagePart) {\n  const note = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join(' ').slice(0, 300);\n  return { json: { ...out, error: { type: 'no_image', message: 'Model returned no image (finishReason ' + finishReason + ')' + (note ? ': ' + note : '') } } };\n}\nconst inline = imagePart.inlineData || imagePart.inline_data;\nconst mimeType = inline.mimeType || inline.mime_type || 'image/png';\nconst subtype = mimeType.split('/')[1] || 'png';\nconst extension = subtype === 'jpeg' ? 'jpg' : subtype;\nreturn {\n  json: { ...out, ok: true, mime_type: mimeType, file_extension: extension, bytes: Math.round(inline.data.length * 3 / 4) },\n  binary: { image: { data: inline.data, mimeType, fileName: 'image.' + extension, fileExtension: extension } }\n};"
+      }
+    },
+    {
+      "id": "3b7bfb5a-5f2d-401e-9b84-3fce9b84971f",
+      "name": "Sticky Note 9d72f262",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        208
+      ],
+      "parameters": {
+        "content": "## Gemini Image gateway\nEvery image call goes through here: same retry, fallback, deadline and cost logic as the text gateway.\n\n**Input (1 item):** purpose, models {primary, fallback}, prompt, aspect_ratio (16:9, 1:1, 4:5...), image_size (1K/2K, optional), timeout_ms, deadline_at, pricing, simulate_primary_fail, passthrough.\n\n**Output:** ok, model, mime_type, file_extension, bytes, fallback_used, usage, cost_usd, latency_ms, attempts[], error, passthrough + binary `image` when ok.\n\nNever throws on model failures: the pipeline degrades to an article without an image.",
+        "color": 7,
+        "width": 160,
+        "height": 224
+      }
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Prepare Image Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Image Request": {
+      "main": [
+        [
+          {
+            "node": "Call Primary Image Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Primary Image Model": {
+      "main": [
+        [
+          {
+            "node": "Parse Primary Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Primary Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Primary Image": {
+      "main": [
+        [
+          {
+            "node": "Primary Image OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primary Image OK?": {
+      "main": [
+        [
+          {
+            "node": "Return Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Fallback Image Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Fallback Image Model": {
+      "main": [
+        [
+          {
+            "node": "Parse Fallback Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Fallback Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fallback Image": {
+      "main": [
+        [
+          {
+            "node": "Return Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "U8pOSL3CVNUKpdfY",
+    "executionTimeout": 280,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [
+    {
+      "id": "0c651cb3-1d91-45ff-8988-ece24ecda19d",
+      "name": "Primary image model",
+      "nodeIds": [
+        "b3cc559d-0a7f-4e30-85a7-f9212eca7a1c",
+        "a40d441e-f709-48c8-a3d5-c4e9cea61413",
+        "915d4729-124d-46a1-ab31-be696990811a",
+        "d930bdf4-2646-412e-b8c5-532f274268d8"
+      ],
+      "description": "Builds the image request, calls the primary image model (1 retry) and extracts the final image. Anything not OK goes to the fallback."
+    },
+    {
+      "id": "c1dafbc3-1aaa-4222-8a15-6f8171f76bd3",
+      "name": "Fallback image model",
+      "nodeIds": [
+        "91b19274-d70c-41d2-a5b9-ff6bf67ebdfe",
+        "84cd7a27-d4f5-4392-936e-0877969d87fa"
+      ],
+      "description": "Calls the fallback image model with the same request and extracts its image the same way."
+    }
+  ],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

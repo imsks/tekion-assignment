@@ -1,0 +1,910 @@
+{
+  "id": "P52KP9QJoLRXqqK8",
+  "name": "CG · 02 Content Pipeline",
+  "description": "Core sub-workflow: validates a topic request, plans a diverse variation from run history, writes a 500-800 word piece with a quality gate, generates an image, saves files and logs the run.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "e4882e41-2b84-4f21-b439-a406f5dc4d63",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/config/content-config.json",
+        "options": {}
+      },
+      "id": "a1798353-fe80-4da3-b26c-bedfaabb7dc2",
+      "name": "Load Config",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "id": "aba2d947-8f3a-416b-ac6c-9ca618dea35e",
+      "name": "Parse Config",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $('When Called').first().json;\nconst config = $input.first().json.data;\nconst L = config.limits;\nconst errors = [];\nconst clean = value => (typeof value === 'string' ? value.trim().replace(/\\s+/g, ' ') : '');\n\nconst topic = clean(req.topic);\nif (!topic) {\n  errors.push('topic is required');\n} else if (topic.length < L.topic_min_chars || topic.length > L.topic_max_chars) {\n  errors.push('topic must be between ' + L.topic_min_chars + ' and ' + L.topic_max_chars + ' characters');\n}\n\nconst styleIds = Object.keys(config.styles);\nconst style = clean(req.style).toLowerCase().replace(/[\\s-]+/g, '_') || 'auto';\nif (style !== 'auto' && !styleIds.includes(style)) {\n  errors.push('style must be one of: auto, ' + styleIds.join(', '));\n}\n\nconst audience = clean(req.audience);\nif (audience.length > L.audience_max_chars) {\n  errors.push('audience must be at most ' + L.audience_max_chars + ' characters');\n}\nconst tone = clean(req.tone);\nif (tone.length > L.tone_max_chars) {\n  errors.push('tone must be at most ' + L.tone_max_chars + ' characters');\n}\n\nlet wordTarget = config.quality.default_word_target;\nif (req.word_target !== undefined && req.word_target !== null && req.word_target !== '') {\n  const n = Number(req.word_target);\n  if (!Number.isInteger(n) || n < L.word_target_min || n > L.word_target_max) {\n    errors.push('word_target must be a whole number between ' + L.word_target_min + ' and ' + L.word_target_max);\n  } else {\n    wordTarget = n;\n  }\n}\n\nconst imageAspect = clean(req.image_aspect) || L.image_aspects[0];\nif (!L.image_aspects.includes(imageAspect)) {\n  errors.push('image_aspect must be one of: ' + L.image_aspects.join(', '));\n}\n\n// Fault injection (only when config.flags.allow_fault_injection is true).\nconst requested = req.simulate && typeof req.simulate === 'object' ? req.simulate : {};\nconst allowFaults = config.flags.allow_fault_injection === true;\nconst simulate = {\n  text_primary_fail: allowFaults && requested.text_primary_fail === true,\n  image_primary_fail: allowFaults && requested.image_primary_fail === true,\n  fatal: allowFaults && requested.fatal === true\n};\nif (simulate.fatal) {\n  throw new Error('Simulated fatal error (fault injection: simulate.fatal)');\n}\n\nconst startedAt = Number(req.received_at) || Date.now();\nconst runId = 'cg-' + $now.toFormat('yyyyMMdd-HHmmss') + '-' + Math.random().toString(36).slice(2, 8);\n\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    config,\n    run: {\n      run_id: runId,\n      source: clean(req.source) || 'api',\n      request_id: clean(req.request_id) || null,\n      started_at: startedAt,\n      deadline_at: startedAt + config.budget.total_ms,\n      output_dir: 'outputs',\n      container_dir: '/home/node/.n8n-files/outputs',\n      simulate\n    },\n    request: { topic, style_requested: style, audience, tone, word_target: wordTarget, image_aspect: imageAspect }\n  }\n}];"
+      },
+      "id": "dfcc4935-463a-4cde-98cb-0dbdcf2745c3",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "50acdd02-c5d0-412a-879a-5b0f21550988",
+      "name": "Request Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        960,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "content_runs"
+        },
+        "limit": "={{ $json.config.diversity.history_window }}",
+        "orderBy": true
+      },
+      "id": "32e0c826-e4d5-4544-90ae-2d5fe6307338",
+      "name": "Load Recent Runs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        400
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const STOP = new Set('a an and are as at be by for from how in into is it its of on or that the this to vs what when where which who why will with your our their about after before over under between new now than more most'.split(' '));\nconst tokens = text => String(text || '')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2 && !STOP.has(word))\n  .map(word => word.replace(/ies$/, 'y').replace(/([^s])s$/, '$1'));\nconst jaccard = (a, b) => {\n  const A = new Set(a);\n  const B = new Set(b);\n  if (!A.size || !B.size) return 0;\n  let shared = 0;\n  for (const x of A) if (B.has(x)) shared += 1;\n  return shared / (A.size + B.size - shared);\n};\n\nconst base = $('Validate Request').first().json;\nconst config = base.config;\nconst D = config.diversity;\nconst P = config.pools;\nconst request = base.request;\nconst run = base.run;\nconst history = $input.all()\n  .map(item => item.json)\n  .filter(row => row && row.run_id && ['success', 'needs_review', 'partial'].includes(row.status));\n\n// Seeded PRNG (FNV-1a + mulberry32): the same run_id and history always replay the same plan.\nlet state = 2166136261;\nfor (let i = 0; i < run.run_id.length; i += 1) {\n  state = Math.imul(state ^ run.run_id.charCodeAt(i), 16777619);\n}\nconst seed = state >>> 0;\nconst random = () => {\n  state = (state + 0x6D2B79F5) | 0;\n  let t = Math.imul(state ^ (state >>> 15), 1 | state);\n  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\n\nconst topicTokens = tokens(request.topic);\nconst topicKey = Array.from(new Set(topicTokens)).sort().join(' ');\nconst related = history.filter(row => jaccard(topicTokens, String(row.topic_key || '').split(' ').filter(Boolean)) >= D.related_topic_similarity);\nconst previous = history[0] || null;\n\n// Weighted draw. The previous run's choice is excluded, options already used for a related\n// topic are down-weighted, and visual styles that suit the format are boosted.\nconst choose = (options, field, boosted) => {\n  const usedForRelated = new Set(related.map(row => row[field]).filter(Boolean));\n  const weighted = options.map(option => {\n    const id = typeof option === 'string' ? option : option.id;\n    let weight = 1;\n    if (previous && previous[field] === id) weight = 0;\n    if (usedForRelated.has(id)) weight *= D.used_weight;\n    if (boosted && boosted.includes(id)) weight *= D.affinity_weight;\n    return { option, id, weight };\n  });\n  const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);\n  let ticket = random() * total;\n  for (const entry of weighted) {\n    if (entry.weight === 0) continue;\n    ticket -= entry.weight;\n    if (ticket <= 0) return entry;\n  }\n  return weighted.filter(entry => entry.weight > 0).pop() || weighted[0];\n};\n\nconst style = request.style_requested === 'auto'\n  ? choose(Object.keys(config.styles), 'style').id\n  : request.style_requested;\nconst styleConfig = config.styles[style];\nconst angle = choose(P.angles, 'angle').option;\nconst hook = choose(P.hooks, 'hook').option;\nconst audience = request.audience\n  ? { id: 'custom', text: request.audience }\n  : choose(P.audiences, 'audience').option;\nconst visual = {\n  style: choose(P.visual_styles, 'visual_style', styleConfig.visual_affinity).id,\n  composition: choose(P.compositions, 'composition').id,\n  palette: choose(P.palettes, 'palette').id,\n  lighting: choose(P.lighting, 'lighting').id\n};\n\nreturn [{\n  json: {\n    ctx: {\n      run,\n      request,\n      plan: {\n        style,\n        style_source: request.style_requested === 'auto' ? 'auto' : 'requested',\n        angle,\n        hook,\n        audience,\n        tone: request.tone || styleConfig.tone,\n        visual,\n        topic_key: topicKey,\n        history_considered: history.length,\n        related_runs: related.length,\n        avoid_titles: related.map(row => row.title).filter(Boolean).slice(0, D.avoid_list_size),\n        seed\n      },\n      brief: null,\n      brief_attempts: 0,\n      novelty: null,\n      novelty_retry: null,\n      article: null,\n      image: null,\n      image_prompt: null,\n      calls: [],\n      failure: null\n    }\n  }\n}];"
+      },
+      "id": "d80ceebe-63c1-4585-9b47-a8bddb538769",
+      "name": "Plan Variation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ctx = $json.ctx;\nconst config = $('Validate Request').first().json.config;\nconst M = config.models.text;\nconst style = config.styles[ctx.plan.style];\nconst plan = ctx.plan;\nconst lines = [\n  'Plan one ' + style.label.toLowerCase() + ' on this topic: \"' + ctx.request.topic + '\".',\n  '',\n  'Purpose of this format: ' + style.purpose + '.',\n  'Required structure (section headings must follow it):',\n  ...style.structure.map(item => '- ' + item),\n  'Format rules:',\n  ...style.rules.map(rule => '- ' + rule),\n  '',\n  'Audience: ' + plan.audience.text + '.',\n  'Tone: ' + plan.tone + '.',\n  'Angle that must shape the whole piece: ' + plan.angle.text + '.',\n  'Opening approach: ' + plan.hook.text + '.',\n  'Target length: about ' + ctx.request.word_target + ' words.'\n];\nif (plan.avoid_titles.length) {\n  lines.push('', 'Recent pieces on related topics used these titles. Choose a clearly different framing and title:');\n  plan.avoid_titles.forEach(title => lines.push('- ' + title));\n}\nif (ctx.novelty_retry) {\n  lines.push('', 'Your previous plan was titled \"' + ctx.novelty_retry.previous_title + '\", which is too close to an earlier piece. Use a distinctly different title and section structure.');\n}\nlines.push('', 'The image concept must describe one concrete scene that fits this piece, without text, logos or recognizable real people.');\n\nconst schema = {\n  type: 'object',\n  properties: {\n    title: { type: 'string', description: 'Specific, compelling headline of at most 90 characters' },\n    meta_description: { type: 'string', description: 'Search snippet of 140 to 160 characters' },\n    thesis: { type: 'string', description: 'The core message in one sentence' },\n    sections: {\n      type: 'array',\n      minItems: 3,\n      maxItems: 8,\n      items: {\n        type: 'object',\n        properties: {\n          heading: { type: 'string', description: 'Section heading exactly as it should appear in the article' },\n          key_points: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string' } }\n        },\n        required: ['heading', 'key_points']\n      }\n    },\n    keywords: { type: 'array', minItems: 3, maxItems: 6, items: { type: 'string' } },\n    image_concept: {\n      type: 'object',\n      properties: {\n        subject: { type: 'string', description: 'Main subject of the image' },\n        setting: { type: 'string', description: 'Where the scene takes place' },\n        details: { type: 'string', description: 'Two or three concrete visual details' },\n        mood: { type: 'string', description: 'Emotional tone of the image' }\n      },\n      required: ['subject', 'setting', 'details', 'mood']\n    }\n  },\n  required: ['title', 'meta_description', 'thesis', 'sections', 'keywords', 'image_concept']\n};\n\nreturn {\n  json: {\n    purpose: 'brief',\n    models: { primary: M.primary, fallback: M.fallback },\n    system: 'You are a senior editor who plans original, specific and accurate content. You never invent statistics, quotes or sources.',\n    prompt: lines.join('\\n'),\n    response_schema: schema,\n    temperature: 1,\n    max_output_tokens: 4096,\n    thinking_level: M.thinking_level,\n    timeout_ms: M.timeouts_ms.brief,\n    deadline_at: ctx.run.deadline_at,\n    pricing: config.pricing_usd_per_million_tokens,\n    simulate_primary_fail: ctx.run.simulate.text_primary_fail,\n    passthrough: ctx\n  }\n};"
+      },
+      "id": "ddaa13f9-61ac-4205-92d1-aeb0ae50af1d",
+      "name": "Build Brief Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $input.first().json;\nreturn [{\n  json: {\n    status: 'rejected',\n    http_status: 400,\n    run_id: v.run.run_id,\n    errors: v.errors,\n    message: 'Invalid request: ' + v.errors.join('; ')\n  }\n}];"
+      },
+      "id": "cccf5535-4c3e-4686-90d4-bfb2a0f32b38",
+      "name": "Reject Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "bJGjreXUAbczsEtI",
+          "cachedResultName": "CG · 10 Gemini Text"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "2e922f3e-7f86-43d6-aac3-20b16e450274",
+      "name": "Generate Brief",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1936,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const STOP = new Set('a an and are as at be by for from how in into is it its of on or that the this to vs what when where which who why will with your our their about after before over under between new now than more most'.split(' '));\nconst tokens = text => String(text || '')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2 && !STOP.has(word))\n  .map(word => word.replace(/ies$/, 'y').replace(/([^s])s$/, '$1'));\nconst jaccard = (a, b) => {\n  const A = new Set(a);\n  const B = new Set(b);\n  if (!A.size || !B.size) return 0;\n  let shared = 0;\n  for (const x of A) if (B.has(x)) shared += 1;\n  return shared / (A.size + B.size - shared);\n};\n\nconst res = $json;\nconst ctx = res.passthrough;\nconst config = $('Validate Request').first().json.config;\nctx.calls.push({ purpose: 'brief', ok: res.ok, model: res.model, fallback_used: res.fallback_used, latency_ms: res.latency_ms, cost_usd: res.cost_usd, usage: res.usage, error: res.error });\nctx.brief_attempts += 1;\n\nif (!res.ok) {\n  ctx.failure = { stage: 'brief', message: res.error };\n  return { json: { ctx, next: 'fail' } };\n}\n\nconst brief = res.data || {};\nconst sections = Array.isArray(brief.sections) ? brief.sections.filter(s => s && s.heading) : [];\nconst complete = Boolean(brief.title && brief.thesis && sections.length >= 3 && brief.image_concept);\nif (!complete) {\n  if (ctx.brief_attempts < 2) {\n    return { json: { ctx, next: 'retry' } };\n  }\n  ctx.failure = { stage: 'brief', message: 'The brief was missing required fields twice' };\n  return { json: { ctx, next: 'fail' } };\n}\n\n// Novelty gate: compare the new title with recent titles on related topics; regenerate once if too close.\nconst titleTokens = tokens(brief.title);\nconst similarity = Math.max(0, ...ctx.plan.avoid_titles.map(title => jaccard(titleTokens, tokens(title))));\nif (similarity > config.quality.novelty_max_similarity && ctx.brief_attempts < 2) {\n  ctx.novelty_retry = { previous_title: brief.title, similarity: Number(similarity.toFixed(2)) };\n  return { json: { ctx, next: 'retry' } };\n}\n\nconst title = String(brief.title).trim();\nctx.brief = {\n  title,\n  slug: title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, ''),\n  meta_description: String(brief.meta_description || '').trim(),\n  thesis: String(brief.thesis).trim(),\n  sections: sections.map(s => ({ heading: String(s.heading).trim(), key_points: (s.key_points || []).map(String) })),\n  keywords: (brief.keywords || []).map(String),\n  image_concept: brief.image_concept\n};\nctx.novelty = {\n  score: Number((1 - similarity).toFixed(2)),\n  max_title_similarity: Number(similarity.toFixed(2)),\n  compared_with: ctx.plan.avoid_titles.length,\n  regenerated: Boolean(ctx.novelty_retry)\n};\nreturn { json: { ctx, next: 'write' } };"
+      },
+      "id": "345dcb4f-22c9-4751-9a3e-85c0a2a0bb43",
+      "name": "Check Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2176,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "write"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "write"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "retry"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "retry"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "fail"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "fail"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "41be0187-1b81-4bf7-b1e7-c64b1d99348b",
+      "name": "Brief Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        2416,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ctx = $json.ctx;\nconst config = $('Validate Request').first().json.config;\nconst M = config.models.text;\nconst Q = config.quality;\nconst style = config.styles[ctx.plan.style];\nconst plan = ctx.plan;\nconst brief = ctx.brief;\nconst revising = Boolean(ctx.article && ctx.article.issues.length);\n\nconst system = [\n  'You are an expert writer producing original, accurate and well-structured content in Markdown.',\n  'Never invent statistics, survey results, quotes, named sources, prices or dates. If a figure is not common knowledge, describe its magnitude qualitatively.',\n  'Do not include links, images, tables, footnotes or placeholder text, and never mention the brief or that you are an AI.',\n  'Never use these phrases: ' + Q.banned_phrases.join('; ') + '.'\n].join('\\n');\n\nconst prompt = revising\n  ? [\n      'Revise this ' + style.label.toLowerCase() + ' to fix the problems listed. Keep everything that already works: title, angle, structure and voice.',\n      '',\n      'Problems to fix:',\n      ...ctx.article.issues.map(issue => '- ' + issue),\n      '',\n      'The final length must be between ' + Q.min_words + ' and ' + Q.max_words + ' words (aim for ' + ctx.request.word_target + ').',\n      'Return only the full revised article body in Markdown, without a title heading.',\n      '',\n      'Current draft:',\n      '',\n      ctx.article.markdown\n    ].join('\\n')\n  : [\n      'Write the ' + style.label.toLowerCase() + ' planned below.',\n      '',\n      'Title (shown above the article; do not repeat it): ' + brief.title,\n      'Core message: ' + brief.thesis,\n      'Audience: ' + plan.audience.text,\n      'Tone: ' + plan.tone,\n      'Angle: ' + plan.angle.text,\n      'Opening: ' + plan.hook.text,\n      '',\n      'Required structure for this format:',\n      ...style.structure.map(item => '- ' + item),\n      'Format rules:',\n      ...style.rules.map(rule => '- ' + rule),\n      '',\n      'Outline (use these as the ## section headings, in this order; you may polish the wording):',\n      ...brief.sections.map(s => '- ' + s.heading + ' (' + s.key_points.join('; ') + ')'),\n      '',\n      'Length: about ' + ctx.request.word_target + ' words, never below ' + Q.min_words + ' or above ' + Q.max_words + '.',\n      'Markdown rules: no # title heading; use ## for section headings; keep every paragraph under ' + Q.max_paragraph_words + ' words; use bullet lists only where they help; use bold sparingly.',\n      'Return only the article body in Markdown.'\n    ].join('\\n');\n\nreturn {\n  json: {\n    purpose: revising ? 'revision' : 'article',\n    models: { primary: M.primary, fallback: M.fallback },\n    system,\n    prompt,\n    temperature: 1,\n    max_output_tokens: 8192,\n    thinking_level: M.thinking_level,\n    timeout_ms: M.timeouts_ms.article,\n    deadline_at: ctx.run.deadline_at,\n    pricing: config.pricing_usd_per_million_tokens,\n    simulate_primary_fail: ctx.run.simulate.text_primary_fail,\n    passthrough: ctx\n  }\n};"
+      },
+      "id": "79c93d69-f89a-4111-885b-234623e2fef2",
+      "name": "Build Article Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst fromImage = item.json.passthrough !== undefined;\nconst ctx = fromImage ? item.json.passthrough : item.json.ctx;\nconst now = Date.now();\n\nif (fromImage) {\n  const r = item.json;\n  ctx.calls.push({ purpose: 'image', ok: r.ok, model: r.model, fallback_used: r.fallback_used, latency_ms: r.latency_ms, cost_usd: r.cost_usd, usage: r.usage, error: r.error });\n  ctx.image = { ok: r.ok, model: r.model, fallback_used: r.fallback_used, mime_type: r.mime_type, file_extension: r.file_extension, bytes: r.bytes, error: r.error };\n}\n\nconst { run, request, plan, brief, article, image } = ctx;\nlet status = 'success';\nif (ctx.failure || !article) status = 'failed';\nelse if (!article.passed) status = 'needs_review';\nelse if (!image || !image.ok) status = 'partial';\n\nconst warnings = [];\nif (article) {\n  if (!article.passed) warnings.push('Quality checks failing: ' + article.checks.filter(c => !c.passed).map(c => c.id).join(', '));\n  article.notes.forEach(note => warnings.push(note));\n  if (!image || !image.ok) warnings.push('Image unavailable: ' + (image && image.error ? image.error : 'not generated'));\n}\n\nconst spent = purposes => ctx.calls.filter(c => purposes.includes(c.purpose)).reduce((sum, c) => sum + (c.latency_ms || 0), 0);\nconst timings = { brief: spent(['brief']), write: spent(['article', 'revision']), image: spent(['image']), total: now - run.started_at };\nconst costUsd = Number(ctx.calls.reduce((sum, c) => sum + (c.cost_usd || 0), 0).toFixed(4));\nconst textCalls = ctx.calls.filter(c => c.purpose !== 'image' && c.ok);\nconst textModel = textCalls.length ? textCalls[textCalls.length - 1].model : null;\nconst fallbackUsed = ctx.calls.some(c => c.fallback_used);\nconst imageFile = image && image.ok ? run.run_id + '.' + image.file_extension : null;\nconst files = {\n  article: article && brief ? run.output_dir + '/' + run.run_id + '.md' : null,\n  image: imageFile ? run.output_dir + '/' + imageFile : null,\n  metadata: run.output_dir + '/' + run.run_id + '.json'\n};\n\nlet articleMarkdown = null;\nlet fileMarkdown = null;\nif (article && brief) {\n  articleMarkdown = '# ' + brief.title + '\\n\\n' + article.markdown + '\\n';\n  const alt = String((brief.image_concept && brief.image_concept.subject) || brief.title).replace(/[\\[\\]]/g, '');\n  fileMarkdown = [\n    '---',\n    'title: ' + JSON.stringify(brief.title),\n    'slug: ' + brief.slug,\n    'description: ' + JSON.stringify(brief.meta_description),\n    'style: ' + plan.style,\n    'audience: ' + JSON.stringify(plan.audience.text),\n    'keywords: ' + JSON.stringify(brief.keywords),\n    'word_count: ' + article.word_count,\n    'status: ' + status,\n    'run_id: ' + run.run_id,\n    'generated_at: ' + new Date(now).toISOString(),\n    '---',\n    '',\n    '# ' + brief.title,\n    '',\n    imageFile ? '![' + alt + '](' + imageFile + ')\\n' : '',\n    article.markdown,\n    ''\n  ].join('\\n');\n}\n\nconst result = {\n  status,\n  http_status: status === 'failed' ? 502 : 200,\n  run_id: run.run_id,\n  topic: request.topic,\n  style: plan.style,\n  title: brief ? brief.title : null,\n  slug: brief ? brief.slug : null,\n  meta_description: brief ? brief.meta_description : null,\n  word_count: article ? article.word_count : 0,\n  article_markdown: articleMarkdown,\n  image: {\n    status: image ? (image.ok ? 'generated' : 'failed') : 'skipped',\n    path: files.image,\n    model: image && image.ok ? image.model : null,\n    fallback_used: Boolean(image && image.fallback_used),\n    aspect_ratio: request.image_aspect,\n    prompt: ctx.image_prompt,\n    error: image && !image.ok ? image.error : null\n  },\n  diversity: {\n    style_source: plan.style_source,\n    angle: plan.angle.id,\n    hook: plan.hook.id,\n    audience: plan.audience.text,\n    visual: plan.visual,\n    history_considered: plan.history_considered,\n    related_runs: plan.related_runs,\n    novelty_score: ctx.novelty ? ctx.novelty.score : null,\n    seed: plan.seed\n  },\n  quality: article ? { passed: article.passed, revisions: article.revisions, checks: article.checks, rounds: article.rounds || [] } : null,\n  warnings,\n  models: { text: textModel, image: image && image.ok ? image.model : null, fallback_used: fallbackUsed },\n  cost_usd: costUsd,\n  timings_ms: timings,\n  files,\n  error: ctx.failure ? ctx.failure.stage + ': ' + ctx.failure.message : null\n};\n\nconst metadata = Object.assign({}, result, {\n  generated_at: new Date(now).toISOString(),\n  source: run.source,\n  request_id: run.request_id,\n  request,\n  plan,\n  brief,\n  novelty: ctx.novelty,\n  simulate: run.simulate,\n  calls: ctx.calls\n});\ndelete metadata.article_markdown;\ndelete metadata.http_status;\n\nconst log = {\n  run_id: run.run_id,\n  source: run.source,\n  status,\n  topic: request.topic,\n  topic_key: plan.topic_key,\n  style: plan.style,\n  style_requested: request.style_requested,\n  angle: plan.angle.id,\n  hook: plan.hook.id,\n  audience: plan.audience.id,\n  tone: request.tone || null,\n  title: brief ? brief.title : null,\n  slug: brief ? brief.slug : null,\n  visual_style: plan.visual.style,\n  composition: plan.visual.composition,\n  palette: plan.visual.palette,\n  lighting: plan.visual.lighting,\n  word_count: article ? article.word_count : 0,\n  revisions: article ? article.revisions : 0,\n  quality_passed: article ? article.passed : false,\n  novelty_score: ctx.novelty ? ctx.novelty.score : null,\n  text_model: textModel,\n  image_model: image && image.ok ? image.model : null,\n  fallback_used: fallbackUsed,\n  duration_ms: timings.total,\n  cost_usd: costUsd,\n  article_path: files.article,\n  error: result.error\n};\n\nconst out = { json: { result, metadata, log, file_markdown: fileMarkdown, image_file: imageFile, run_id: run.run_id, container_dir: run.container_dir } };\nif (imageFile && item.binary && item.binary.image) {\n  out.binary = { image: item.binary.image };\n}\nreturn [out];"
+      },
+      "id": "9859913a-db3d-43c7-8ee8-13f8ce535ddb",
+      "name": "Finalize Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4224,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "bJGjreXUAbczsEtI",
+          "cachedResultName": "CG · 10 Gemini Text"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "7970dbcc-5209-4b9e-8a2e-fbbeb89b0d87",
+      "name": "Write Article",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        2944,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const res = $json;\nconst ctx = res.passthrough;\nconst config = $('Validate Request').first().json.config;\nconst Q = config.quality;\nconst rules = config.styles[ctx.plan.style].checks || {};\nctx.calls.push({ purpose: res.purpose, ok: res.ok, model: res.model, fallback_used: res.fallback_used, latency_ms: res.latency_ms, cost_usd: res.cost_usd, usage: res.usage, error: res.error });\nconst previous = ctx.article;\n\nif (!res.ok) {\n  if (previous) {\n    previous.notes.push('A revision failed, so the previous draft was kept: ' + res.error);\n    previous.issues = [];\n    return { json: { ctx, next: 'illustrate' } };\n  }\n  ctx.failure = { stage: 'write', message: res.error };\n  return { json: { ctx, next: 'fail' } };\n}\n\n// Normalise: drop code fences and a leading H1 (the title is rendered separately).\nconst markdown = String(res.text)\n  .replace(/^\\x60{3}[a-z]*\\s*\\n/i, '')\n  .replace(/\\n\\x60{3}\\s*$/, '')\n  .trim()\n  .replace(/^#\\s+[^\\n]*\\n+/, '')\n  .trim();\n\nconst countWords = text => (text\n  .replace(/^#{1,6}\\s+/gm, '')\n  .replace(/^\\s*(?:[-*+]|\\d+[.)])\\s+/gm, '')\n  .match(/[A-Za-z0-9][A-Za-z0-9'’-]*/g) || []).length;\nconst wordCount = countWords(markdown);\nconst lines = markdown.split('\\n');\nconst headings = lines\n  .filter(line => /^##\\s+/.test(line))\n  .map(line => line.replace(/^##\\s+/, '').trim());\n// Paragraphs: blank out heading lines, split on blank lines, skip list blocks.\nconst paragraphs = lines\n  .map(line => (/^#{1,6}\\s/.test(line.trim()) ? '' : line))\n  .join('\\n')\n  .split(/\\n\\s*\\n/)\n  .map(block => block.trim())\n  .filter(block => block && !/^(?:[-*+]|\\d+[.)])\\s/.test(block));\nconst longParagraphs = paragraphs.filter(block => countWords(block) > Q.max_paragraph_words).length;\nconst lower = markdown.toLowerCase();\nconst banned = Q.banned_phrases.filter(phrase => lower.includes(phrase.toLowerCase()));\nconst hasLinks = /https?:\\/\\/|www\\.|\\]\\(/i.test(markdown);\n\nconst checks = [];\nconst issues = [];\nconst check = (id, passed, detail, fix) => {\n  checks.push({ id, passed, detail });\n  if (!passed) issues.push(fix);\n};\nconst target = ctx.request.word_target;\ncheck('word_count', wordCount >= Q.min_words && wordCount <= Q.max_words,\n  wordCount + ' words (allowed ' + Q.min_words + '-' + Q.max_words + ')',\n  wordCount < Q.min_words\n    ? 'It has ' + wordCount + ' words; expand it to about ' + target + ' by deepening the existing sections with concrete examples.'\n    : 'It has ' + wordCount + ' words; tighten it to about ' + target + ' without dropping any section.');\ncheck('sections', headings.length >= Q.min_h2_sections,\n  headings.length + ' ## sections (min ' + Q.min_h2_sections + ')',\n  'Organise the piece into at least ' + Q.min_h2_sections + ' sections with ## headings.');\ncheck('paragraph_length', longParagraphs === 0,\n  longParagraphs + ' paragraphs over ' + Q.max_paragraph_words + ' words',\n  'Split every paragraph longer than ' + Q.max_paragraph_words + ' words.');\ncheck('banned_phrases', banned.length === 0,\n  banned.length ? 'found: ' + banned.join(', ') : 'none found',\n  'Remove these phrases: ' + banned.join(', ') + '.');\ncheck('no_links', !hasLinks, hasLinks ? 'contains links' : 'no links', 'Remove all links and URLs.');\nif (rules.min_steps) {\n  const steps = headings.filter(h => /^step\\s+\\d+/i.test(h)).length;\n  check('steps', steps >= rules.min_steps, steps + ' \"Step N\" sections (min ' + rules.min_steps + ')',\n    'Present the procedure as at least ' + rules.min_steps + ' ## sections titled \"Step N: ...\".');\n}\nif (rules.min_numbered_h2) {\n  const items = headings.filter(h => /^\\d+[.)]\\s/.test(h)).length;\n  check('numbered_items', items >= rules.min_numbered_h2, items + ' numbered items (min ' + rules.min_numbered_h2 + ')',\n    'Present at least ' + rules.min_numbered_h2 + ' items as numbered ## headings such as \"## 1. ...\".');\n}\nif (rules.heading_keywords_any) {\n  const found = headings.some(h => rules.heading_keywords_any.some(k => h.toLowerCase().includes(k)));\n  check('required_section', found, found ? 'present' : 'missing',\n    'Add a ## section whose heading includes one of: ' + rules.heading_keywords_any.join(', ') + '.');\n}\n\nconst passed = checks.every(c => c.passed);\nconst revisions = previous ? previous.revisions + 1 : 0;\nconst rounds = (previous ? previous.rounds : []).concat([{ draft: revisions, word_count: wordCount, failed: checks.filter(c => !c.passed).map(c => c.id) }]);\nctx.article = { markdown, word_count: wordCount, headings, checks, issues, passed, revisions, rounds, notes: previous ? previous.notes : [] };\n\nlet next = 'illustrate';\nif (!passed) {\n  if (revisions >= Q.max_revisions) {\n    ctx.article.notes.push('Checks still failing after ' + revisions + ' revisions.');\n  } else if (Date.now() - ctx.run.started_at > config.budget.revision_cutoff_ms) {\n    ctx.article.notes.push('Revision skipped to stay within the time budget.');\n  } else {\n    next = 'revise';\n  }\n}\nreturn { json: { ctx, next } };"
+      },
+      "id": "6ccf47b3-0da9-4931-8ba0-e3d687448f81",
+      "name": "Quality Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "revise"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "revise"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "illustrate"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "illustrate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.next }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "fail"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "fail"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ecd8fb3-b4a2-4312-b7ff-1fb3e384670e",
+      "name": "Quality Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        3424,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ctx = $json.ctx;\nconst config = $('Validate Request').first().json.config;\nconst M = config.models.image;\nconst concept = ctx.brief.image_concept || {};\nconst visual = ctx.plan.visual;\nconst clause = value => String(value || '').trim().replace(/[.\\s]+$/, '');\nconst prompt = [\n  'Create a ' + visual.style + ' image to accompany an article titled \"' + ctx.brief.title + '\".',\n  'Subject: ' + clause(concept.subject) + '.',\n  'Setting: ' + clause(concept.setting) + '.',\n  concept.details ? 'Details: ' + clause(concept.details) + '.' : '',\n  'Mood: ' + clause(concept.mood) + '.',\n  'Composition: ' + visual.composition + '.',\n  'Color palette: ' + visual.palette + '.',\n  'Lighting: ' + visual.lighting + '.',\n  'Do not include any text, letters, numbers, captions, signage, logos, watermarks or brand marks. Any vehicles or products must be unbranded. No recognizable real people.'\n].filter(Boolean).join('\\n');\nctx.image_prompt = prompt;\nreturn {\n  json: {\n    purpose: 'image',\n    models: { primary: M.primary, fallback: M.fallback },\n    prompt,\n    aspect_ratio: ctx.request.image_aspect,\n    image_size: M.image_size,\n    timeout_ms: M.timeout_ms,\n    deadline_at: ctx.run.deadline_at,\n    pricing: config.pricing_usd_per_million_tokens,\n    simulate_primary_fail: ctx.run.simulate.image_primary_fail,\n    passthrough: ctx\n  }\n};"
+      },
+      "id": "348116b7-c9ee-4102-aa46-45d0be4fd33c",
+      "name": "Build Image Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3696,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "50Ob8wBaUDmbATBs",
+          "cachedResultName": "CG · 11 Gemini Image"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "16cac63f-8aef-4e7d-bd58-5de6bf759bd7",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        3936,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fin = $input.first();\nconst f = fin.json;\nconst asFile = (text, mimeType, fileName) => ({\n  data: Buffer.from(text, 'utf8').toString('base64'),\n  mimeType,\n  fileName,\n  fileExtension: fileName.split('.').pop()\n});\nconst base = f.container_dir + '/' + f.run_id;\nconst files = [];\nif (f.file_markdown) {\n  files.push({ json: { kind: 'article', path: base + '.md' }, binary: { data: asFile(f.file_markdown, 'text/markdown', f.run_id + '.md') } });\n}\nif (f.image_file && fin.binary && fin.binary.image) {\n  files.push({ json: { kind: 'image', path: f.container_dir + '/' + f.image_file }, binary: { data: fin.binary.image } });\n}\nfiles.push({ json: { kind: 'metadata', path: base + '.json' }, binary: { data: asFile(JSON.stringify(f.metadata, null, 2), 'application/json', f.run_id + '.json') } });\nreturn files;"
+      },
+      "id": "173a3b58-d228-4f29-8426-3c2f539ea769",
+      "name": "Build Output Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4464,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.path }}",
+        "options": {}
+      },
+      "id": "e042d49b-49b6-4434-bd48-bed11e815e1e",
+      "name": "Write Output Files",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        4704,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Finalize Run').first().json.log }];"
+      },
+      "id": "8fee2c59-f070-404e-8cd2-e2ba8886c9ab",
+      "name": "Run Log Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4944,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "content_runs"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {}
+      },
+      "id": "13a05b1d-e521-4b29-9294-b775161b0cd5",
+      "name": "Log Run",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        5184,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fin = $('Finalize Run').first();\nconst out = { json: fin.json.result };\nif (fin.binary && fin.binary.image) {\n  out.binary = { image: fin.binary.image };\n}\nreturn [out];"
+      },
+      "id": "2b393008-cfae-4abb-b7c7-1fa7d7b80fca",
+      "name": "Return Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5424,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## CG · 02 Content Pipeline\nTurns one topic into a 500-800 word piece plus an AI image. Called by **CG · 01 Intake** (webhook + form) and **CG · 03 Batch Runner**.\n\n1. **Validate & plan**: load config, validate input, read recent runs, choose style / angle / hook / audience / visuals for diversity.\n2. **Brief**: JSON-schema outline + title novelty check (regenerates once).\n3. **Write & quality gate**: draft, deterministic checks, up to 2 targeted revisions.\n4. **Illustrate**: image from the brief's concept + planned visual style.\n5. **Finalize & persist**: outputs/<run_id>.md, .jpg and .json, a row in content_runs, and the result.\n\nStatus: success, needs_review, partial (no image), failed, rejected. One 280 s deadline is shared by every model call.",
+        "height": 288,
+        "width": 592,
+        "color": 7
+      },
+      "id": "8f104ae3-c01d-4f89-b67e-16dd84d6caa0",
+      "name": "Sticky Note 8e9b4910",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -144
+      ]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Load Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Config": {
+      "main": [
+        [
+          {
+            "node": "Parse Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Config": {
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Recent Runs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Recent Runs": {
+      "main": [
+        [
+          {
+            "node": "Plan Variation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Variation": {
+      "main": [
+        [
+          {
+            "node": "Build Brief Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Brief Request": {
+      "main": [
+        [
+          {
+            "node": "Generate Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Brief": {
+      "main": [
+        [
+          {
+            "node": "Check Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Brief": {
+      "main": [
+        [
+          {
+            "node": "Brief Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief Route": {
+      "main": [
+        [
+          {
+            "node": "Build Article Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Brief Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finalize Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Article Request": {
+      "main": [
+        [
+          {
+            "node": "Write Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Run": {
+      "main": [
+        [
+          {
+            "node": "Build Output Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Article": {
+      "main": [
+        [
+          {
+            "node": "Quality Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Gate": {
+      "main": [
+        [
+          {
+            "node": "Quality Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Route": {
+      "main": [
+        [
+          {
+            "node": "Build Article Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Image Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finalize Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Image Request": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Finalize Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Output Files": {
+      "main": [
+        [
+          {
+            "node": "Write Output Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Output Files": {
+      "main": [
+        [
+          {
+            "node": "Run Log Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Log Row": {
+      "main": [
+        [
+          {
+            "node": "Log Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Run": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "U8pOSL3CVNUKpdfY",
+    "executionTimeout": 290,
+    "callerPolicy": "workflowsFromSameOwner",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [
+    {
+      "id": "7d43b1d1-f267-48d0-a5b9-2fe6843846ac",
+      "name": "Validate & plan",
+      "nodeIds": [
+        "a1798353-fe80-4da3-b26c-bedfaabb7dc2",
+        "aba2d947-8f3a-416b-ac6c-9ca618dea35e",
+        "dfcc4935-463a-4cde-98cb-0dbdcf2745c3",
+        "50acdd02-c5d0-412a-879a-5b0f21550988",
+        "cccf5535-4c3e-4686-90d4-bfb2a0f32b38",
+        "32e0c826-e4d5-4544-90ae-2d5fe6307338",
+        "d80ceebe-63c1-4585-9b47-a8bddb538769"
+      ],
+      "description": "Loads config, validates the request (rejects bad input), reads recent runs and plans style, angle, hook, audience and visuals for diversity."
+    },
+    {
+      "id": "3d91b087-ffd0-470b-80a9-c32d56740f74",
+      "name": "Brief",
+      "nodeIds": [
+        "ddaa13f9-61ac-4205-92d1-aeb0ae50af1d",
+        "2e922f3e-7f86-43d6-aac3-20b16e450274",
+        "345dcb4f-22c9-4751-9a3e-85c0a2a0bb43",
+        "41be0187-1b81-4bf7-b1e7-c64b1d99348b"
+      ],
+      "description": "Plans the piece as schema-validated JSON (title, thesis, outline, image concept); regenerates once if the title repeats a recent one."
+    },
+    {
+      "id": "62387399-5f43-4c14-a655-1f5b00c25ac0",
+      "name": "Write & quality gate",
+      "nodeIds": [
+        "79c93d69-f89a-4111-885b-234623e2fef2",
+        "7970dbcc-5209-4b9e-8a2e-fbbeb89b0d87",
+        "6ccf47b3-0da9-4931-8ba0-e3d687448f81",
+        "7ecd8fb3-b4a2-4312-b7ff-1fb3e384670e"
+      ],
+      "description": "Writes the draft, scores it with deterministic checks and runs up to 2 targeted revisions within the time budget."
+    },
+    {
+      "id": "191ef5d8-8f19-46bb-afc2-c489665d1bb3",
+      "name": "Illustrate",
+      "nodeIds": [
+        "348116b7-c9ee-4102-aa46-45d0be4fd33c",
+        "16cac63f-8aef-4e7d-bd58-5de6bf759bd7"
+      ],
+      "description": "Builds an image prompt from the brief and the planned visual style, then calls the image gateway (fallback inside)."
+    },
+    {
+      "id": "e8e31c4a-dfd8-4156-8e00-82845afa4b06",
+      "name": "Finalize & persist",
+      "nodeIds": [
+        "9859913a-db3d-43c7-8ee8-13f8ce535ddb",
+        "173a3b58-d228-4f29-8426-3c2f539ea769",
+        "e042d49b-49b6-4434-bd48-bed11e815e1e",
+        "8fee2c59-f070-404e-8cd2-e2ba8886c9ab",
+        "13a05b1d-e521-4b29-9294-b775161b0cd5",
+        "2b393008-cfae-4abb-b7c7-1fa7d7b80fca"
+      ],
+      "description": "Sets the run status, writes <run_id>.md, .jpg and .json to outputs/, logs the run to content_runs and returns the result."
+    }
+  ],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

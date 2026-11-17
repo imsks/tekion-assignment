@@ -1,0 +1,342 @@
+{
+  "id": "bJGjreXUAbczsEtI",
+  "name": "CG · 10 Gemini Text",
+  "description": "Gateway sub-workflow for Gemini text generation: primary model with retry, fallback model, deadline-aware timeouts, JSON-schema output parsing, usage and cost tracking. Never throws on model failure.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a7f3cf6c-d64e-4c70-bfd2-6a834eb3d705",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const input = $json;\nconst models = input.models || {};\nif (!models.primary) {\n  throw new Error('Gemini Text gateway: models.primary is required');\n}\nconst base = 'https://generativelanguage.googleapis.com/v1beta/models/';\nconst generationConfig = {\n  temperature: typeof input.temperature === 'number' ? input.temperature : 1,\n  maxOutputTokens: Number(input.max_output_tokens) || 8192\n};\nif (input.thinking_level) {\n  generationConfig.thinkingConfig = { thinkingLevel: input.thinking_level };\n}\nif (input.response_schema) {\n  generationConfig.responseMimeType = 'application/json';\n  generationConfig.responseJsonSchema = input.response_schema;\n}\nconst body = {\n  contents: [{ role: 'user', parts: [{ text: String(input.prompt || '') }] }],\n  generationConfig\n};\nif (input.system) {\n  body.systemInstruction = { parts: [{ text: String(input.system) }] };\n}\nconst fallbackModel = models.fallback || models.primary;\n// Fault injection: aim the primary call at a model id that does not exist, so the\n// real API fails and the fallback path runs exactly as it would during an outage.\nconst primaryTarget = input.simulate_primary_fail ? models.primary + '-simulated-outage' : models.primary;\nconst now = Date.now();\nreturn {\n  json: {\n    purpose: input.purpose || 'text',\n    expects_json: Boolean(input.response_schema),\n    body,\n    primary: { model: models.primary, url: base + primaryTarget + ':generateContent' },\n    fallback: { model: fallbackModel, url: base + fallbackModel + ':generateContent' },\n    timeout_ms: Math.min(Math.max(Number(input.timeout_ms) || 90000, 5000), 240000),\n    deadline_at: Number(input.deadline_at) || now + 280000,\n    pricing: input.pricing || {},\n    simulated_failure: Boolean(input.simulate_primary_fail),\n    started_at: now,\n    passthrough: input.passthrough === undefined ? null : input.passthrough\n  }\n};"
+      },
+      "id": "949230bf-506e-4f0d-914c-4e23321bb431",
+      "name": "Prepare Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.primary.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": "={{ Math.max(3000, Math.min($json.timeout_ms, $json.deadline_at - $now.toMillis() - 2000)) }}"
+        }
+      },
+      "id": "63a8a84c-3d9d-49be-a2f2-511df44a77bd",
+      "name": "Call Primary Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        304
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CgGeminiApiKey01",
+          "name": "Gemini API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ATTEMPT = 'primary';\nconst prep = $('Prepare Gemini Request').first().json;\nconst res = $json || {};\nconst zero = { input_tokens: 0, output_tokens: 0, thinking_tokens: 0 };\nconst base = { attempt: ATTEMPT, model: prep[ATTEMPT].model, ok: false, text: null, data: null, finish_reason: null, usage: zero, error: null };\n\n// HTTP failures arrive here through the node's error output, after its retry.\nif (!res.candidates && res.error !== undefined) {\n  const raw = res.error;\n  const details = res.details || {};\n  let message = typeof raw === 'string' ? raw : String((raw && raw.message) || JSON.stringify(raw));\n  const description = details.description || (raw && raw.description);\n  if (description && description !== message) message += ' | ' + description;\n  const causeMessage = raw && raw.cause && raw.cause.message ? String(raw.cause.message) : '';\n  const codeMatch = /^(\\d{3})\\b/.exec(causeMessage) || /^(\\d{3})\\b/.exec(message);\n  const status = details.httpCode || (raw && raw.httpCode) || (codeMatch && codeMatch[1]) || null;\n  const type = /timeout|ETIMEDOUT|ECONNABORTED/i.test(message + ' ' + causeMessage) ? 'timeout' : 'http_error';\n  return { json: { ...base, error: { type, http_status: status ? Number(status) : null, message: message.slice(0, 600) } } };\n}\n\nconst candidate = (res.candidates || [])[0] || {};\nconst parts = (candidate.content && candidate.content.parts) || [];\nconst text = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join('').trim();\nconst finishReason = candidate.finishReason || (res.promptFeedback && res.promptFeedback.blockReason) || 'NO_CANDIDATE';\nconst meta = res.usageMetadata || {};\nconst usage = {\n  input_tokens: meta.promptTokenCount || 0,\n  output_tokens: (meta.candidatesTokenCount || 0) + (meta.thoughtsTokenCount || 0),\n  thinking_tokens: meta.thoughtsTokenCount || 0\n};\nconst out = { ...base, finish_reason: finishReason, usage };\nif (!text) {\n  return { json: { ...out, error: { type: 'empty_response', message: 'Model returned no text (finishReason ' + finishReason + ')' } } };\n}\nif (finishReason === 'MAX_TOKENS') {\n  return { json: { ...out, error: { type: 'truncated', message: 'Output stopped at maxOutputTokens' } } };\n}\nlet data = null;\nif (prep.expects_json) {\n  try {\n    data = JSON.parse(text.replace(/^\\x60{3}(?:json)?\\s*/i, '').replace(/\\s*\\x60{3}$/, ''));\n  } catch (e) {\n    return { json: { ...out, error: { type: 'invalid_json', message: 'Output was not valid JSON: ' + e.message } } };\n  }\n}\nreturn { json: { ...out, ok: true, text, data } };"
+      },
+      "id": "419b4705-32f9-4e74-87cc-1b6cc4299857",
+      "name": "Parse Primary Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7f398028-9857-43f9-9a6c-69d61ae8ca2a",
+      "name": "Primary OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        960,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Prepare Gemini Request').first().json;\nconst final = $input.first().json;\nconst primary = $('Parse Primary Response').first().json;\nconst attempts = (final.attempt === 'fallback' ? [primary, final] : [final]).map(a => {\n  const price = prep.pricing[a.model] || null;\n  const u = a.usage;\n  const cost = price ? (u.input_tokens * price.input + u.output_tokens * price.output) / 1e6 : 0;\n  return { attempt: a.attempt, model: a.model, ok: a.ok, usage: u, cost_usd: Number(cost.toFixed(6)), error: a.error };\n});\nconst usage = { input_tokens: 0, output_tokens: 0, thinking_tokens: 0 };\nfor (const a of attempts) {\n  usage.input_tokens += a.usage.input_tokens;\n  usage.output_tokens += a.usage.output_tokens;\n  usage.thinking_tokens += a.usage.thinking_tokens;\n}\nconst ok = final.ok === true;\nreturn [{\n  json: {\n    ok,\n    purpose: prep.purpose,\n    text: ok ? final.text : null,\n    data: ok ? final.data : null,\n    model: ok ? final.model : null,\n    fallback_used: final.attempt === 'fallback',\n    finish_reason: final.finish_reason,\n    latency_ms: Date.now() - prep.started_at,\n    usage,\n    cost_usd: Number(attempts.reduce((sum, a) => sum + a.cost_usd, 0).toFixed(6)),\n    attempts,\n    error: ok ? null : attempts.map(a => a.attempt + ' ' + a.model + ': ' + (a.error ? a.error.message : 'unknown error')).join(' | '),\n    simulated_failure: prep.simulated_failure,\n    passthrough: prep.passthrough\n  }\n}];"
+      },
+      "id": "db453f17-b67a-40df-a220-f01741c4bbf7",
+      "name": "Return Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $(\"Prepare Gemini Request\").first().json.fallback.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($(\"Prepare Gemini Request\").first().json.body) }}",
+        "options": {
+          "timeout": "={{ Math.max(3000, Math.min($(\"Prepare Gemini Request\").first().json.timeout_ms, $(\"Prepare Gemini Request\").first().json.deadline_at - $now.toMillis() - 2000)) }}"
+        }
+      },
+      "id": "58a1dab3-5f61-44fa-89a7-5127a33b10b1",
+      "name": "Call Fallback Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1232,
+        704
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CgGeminiApiKey01",
+          "name": "Gemini API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ATTEMPT = 'fallback';\nconst prep = $('Prepare Gemini Request').first().json;\nconst res = $json || {};\nconst zero = { input_tokens: 0, output_tokens: 0, thinking_tokens: 0 };\nconst base = { attempt: ATTEMPT, model: prep[ATTEMPT].model, ok: false, text: null, data: null, finish_reason: null, usage: zero, error: null };\n\n// HTTP failures arrive here through the node's error output, after its retry.\nif (!res.candidates && res.error !== undefined) {\n  const raw = res.error;\n  const details = res.details || {};\n  let message = typeof raw === 'string' ? raw : String((raw && raw.message) || JSON.stringify(raw));\n  const description = details.description || (raw && raw.description);\n  if (description && description !== message) message += ' | ' + description;\n  const causeMessage = raw && raw.cause && raw.cause.message ? String(raw.cause.message) : '';\n  const codeMatch = /^(\\d{3})\\b/.exec(causeMessage) || /^(\\d{3})\\b/.exec(message);\n  const status = details.httpCode || (raw && raw.httpCode) || (codeMatch && codeMatch[1]) || null;\n  const type = /timeout|ETIMEDOUT|ECONNABORTED/i.test(message + ' ' + causeMessage) ? 'timeout' : 'http_error';\n  return { json: { ...base, error: { type, http_status: status ? Number(status) : null, message: message.slice(0, 600) } } };\n}\n\nconst candidate = (res.candidates || [])[0] || {};\nconst parts = (candidate.content && candidate.content.parts) || [];\nconst text = parts.filter(p => typeof p.text === 'string' && !p.thought).map(p => p.text).join('').trim();\nconst finishReason = candidate.finishReason || (res.promptFeedback && res.promptFeedback.blockReason) || 'NO_CANDIDATE';\nconst meta = res.usageMetadata || {};\nconst usage = {\n  input_tokens: meta.promptTokenCount || 0,\n  output_tokens: (meta.candidatesTokenCount || 0) + (meta.thoughtsTokenCount || 0),\n  thinking_tokens: meta.thoughtsTokenCount || 0\n};\nconst out = { ...base, finish_reason: finishReason, usage };\nif (!text) {\n  return { json: { ...out, error: { type: 'empty_response', message: 'Model returned no text (finishReason ' + finishReason + ')' } } };\n}\nif (finishReason === 'MAX_TOKENS') {\n  return { json: { ...out, error: { type: 'truncated', message: 'Output stopped at maxOutputTokens' } } };\n}\nlet data = null;\nif (prep.expects_json) {\n  try {\n    data = JSON.parse(text.replace(/^\\x60{3}(?:json)?\\s*/i, '').replace(/\\s*\\x60{3}$/, ''));\n  } catch (e) {\n    return { json: { ...out, error: { type: 'invalid_json', message: 'Output was not valid JSON: ' + e.message } } };\n  }\n}\nreturn { json: { ...out, ok: true, text, data } };"
+      },
+      "id": "20d0154e-14e4-4c7f-a0b9-dfbfde3f443d",
+      "name": "Parse Fallback Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Gemini Text gateway\nEvery text call in the content pipeline goes through here, so model choice, timeouts, retries, fallback and cost tracking live in one place.\n\n**Input (1 item):** purpose, models {primary, fallback}, system, prompt, response_schema (optional JSON Schema), temperature, max_output_tokens, thinking_level, timeout_ms, deadline_at (epoch ms), pricing, simulate_primary_fail, passthrough.\n\n**Output:** ok, text, data (parsed JSON when a schema is given), model, fallback_used, usage, cost_usd, latency_ms, attempts[], error, passthrough.\n\nNever throws on model failures: callers branch on `ok`.",
+        "height": 224,
+        "width": 400,
+        "color": 7
+      },
+      "id": "46c00c36-7c60-4c31-9066-c14d8bec03e2",
+      "name": "Sticky Note 9c9d689b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Resilience\n- Each call retries once after 2 s (transient 429/5xx).\n- HTTP errors leave through the error output; empty, truncated or invalid-JSON answers fail the parse step. Both paths go to the fallback model.\n- Timeout = min(timeout_ms, time left before deadline_at), so a slow call cannot push the run past the 5-minute budget.",
+        "height": 480,
+        "width": 640,
+        "color": 5
+      },
+      "id": "8a873e83-5948-44a7-8d7f-713102d9ff82",
+      "name": "Sticky Note 529863bf",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -208
+      ]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Prepare Gemini Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Gemini Request": {
+      "main": [
+        [
+          {
+            "node": "Call Primary Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Primary Model": {
+      "main": [
+        [
+          {
+            "node": "Parse Primary Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Primary Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Primary Response": {
+      "main": [
+        [
+          {
+            "node": "Primary OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primary OK?": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Fallback Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Fallback Model": {
+      "main": [
+        [
+          {
+            "node": "Parse Fallback Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Fallback Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fallback Response": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate",
+    "errorWorkflow": "U8pOSL3CVNUKpdfY",
+    "executionTimeout": 280,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [
+    {
+      "id": "cbea75b8-20a4-47fe-8fc3-b32c2ffcd103",
+      "name": "Primary model",
+      "nodeIds": [
+        "949230bf-506e-4f0d-914c-4e23321bb431",
+        "63a8a84c-3d9d-49be-a2f2-511df44a77bd",
+        "419b4705-32f9-4e74-87cc-1b6cc4299857",
+        "7f398028-9857-43f9-9a6c-69d61ae8ca2a"
+      ],
+      "description": "Builds the Gemini request, calls the primary model (1 retry) and validates the answer. Anything not OK goes on to the fallback."
+    },
+    {
+      "id": "92f73969-606d-494d-b9bc-c933cc533319",
+      "name": "Fallback model",
+      "nodeIds": [
+        "58a1dab3-5f61-44fa-89a7-5127a33b10b1",
+        "20d0154e-14e4-4c7f-a0b9-dfbfde3f443d"
+      ],
+      "description": "Calls the fallback model with the same request and validates its answer the same way."
+    }
+  ],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

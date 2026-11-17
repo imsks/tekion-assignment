@@ -1,0 +1,259 @@
+{
+  "id": "GbktUrU3YvVXrlP4",
+  "name": "CG · 00 Setup",
+  "description": "One-time setup: creates the content_runs and content_errors Data Tables (idempotent) used by the content generation workflows.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "b904251d-dc5f-41dd-8195-9b0e8bfb98f5",
+      "name": "Run Setup",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "1023cacd-a23f-4bbb-a9db-2d9ab4004238",
+      "name": "Create content_runs Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "content_runs",
+        "columns": {
+          "column": [
+            {
+              "name": "run_id",
+              "type": "string"
+            },
+            {
+              "name": "source",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "topic",
+              "type": "string"
+            },
+            {
+              "name": "topic_key",
+              "type": "string"
+            },
+            {
+              "name": "style",
+              "type": "string"
+            },
+            {
+              "name": "style_requested",
+              "type": "string"
+            },
+            {
+              "name": "angle",
+              "type": "string"
+            },
+            {
+              "name": "hook",
+              "type": "string"
+            },
+            {
+              "name": "audience",
+              "type": "string"
+            },
+            {
+              "name": "tone",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "slug",
+              "type": "string"
+            },
+            {
+              "name": "visual_style",
+              "type": "string"
+            },
+            {
+              "name": "composition",
+              "type": "string"
+            },
+            {
+              "name": "palette",
+              "type": "string"
+            },
+            {
+              "name": "lighting",
+              "type": "string"
+            },
+            {
+              "name": "word_count",
+              "type": "number"
+            },
+            {
+              "name": "revisions",
+              "type": "number"
+            },
+            {
+              "name": "quality_passed",
+              "type": "boolean"
+            },
+            {
+              "name": "novelty_score",
+              "type": "number"
+            },
+            {
+              "name": "text_model",
+              "type": "string"
+            },
+            {
+              "name": "image_model",
+              "type": "string"
+            },
+            {
+              "name": "fallback_used",
+              "type": "boolean"
+            },
+            {
+              "name": "duration_ms",
+              "type": "number"
+            },
+            {
+              "name": "cost_usd",
+              "type": "number"
+            },
+            {
+              "name": "article_path",
+              "type": "string"
+            },
+            {
+              "name": "error",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "da358dd8-3784-4983-88e1-4221de52da99",
+      "name": "Create content_errors Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "content_errors",
+        "columns": {
+          "column": [
+            {
+              "name": "workflow_id",
+              "type": "string"
+            },
+            {
+              "name": "workflow_name",
+              "type": "string"
+            },
+            {
+              "name": "execution_id",
+              "type": "string"
+            },
+            {
+              "name": "execution_url",
+              "type": "string"
+            },
+            {
+              "name": "mode",
+              "type": "string"
+            },
+            {
+              "name": "last_node",
+              "type": "string"
+            },
+            {
+              "name": "error_message",
+              "type": "string"
+            },
+            {
+              "name": "error_detail",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "9b9039bc-d21e-4792-9591-0d0cb78a8ac7",
+      "name": "Sticky Note ea412d44",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -96
+      ],
+      "parameters": {
+        "content": "## One-time setup\nCreates the two Data Tables used by the content workflows. Safe to re-run: existing tables are kept (createIfNotExists).\n\n- **content_runs**: one row per generation run (inputs, diversity choices, models, quality, timing, cost). Read by the diversity planner.\n- **content_errors**: one row per failed execution, written by the error handler.",
+        "color": 7,
+        "width": 688,
+        "height": 224
+      }
+    }
+  ],
+  "connections": {
+    "Run Setup": {
+      "main": [
+        [
+          {
+            "node": "Create content_runs Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create content_runs Table": {
+      "main": [
+        [
+          {
+            "node": "Create content_errors Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

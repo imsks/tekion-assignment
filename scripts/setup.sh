@@ -39,13 +39,37 @@ run_setup_workflow() {
 }
 
 publish_workflows() {
-  local f
+  # Publish in dependency order: a workflow is published only after every sub-workflow
+  # it calls (and its error workflow) is published, because n8n rejects it otherwise.
+  local pending=() published=() f id deps dep ready progress
   for f in workflows/*.json; do
     [[ -e "$f" ]] || continue
     # Only workflows with a non-manual trigger can be published.
     if jq -e 'any(.nodes[]; .type | test("webhook|formTrigger|executeWorkflowTrigger|errorTrigger"; "i"))' "$f" >/dev/null; then
-      n8n_cli publish:workflow --id="$(jq -r '.id' "$f")"
+      pending+=("$f")
     fi
+  done
+  while ((${#pending[@]})); do
+    progress=0
+    local remaining=()
+    for f in "${pending[@]}"; do
+      id=$(jq -r '.id' "$f")
+      deps=$(jq -r '[.nodes[] | select(.type == "n8n-nodes-base.executeWorkflow") | .parameters.workflowId.value]
+                    + [.settings.errorWorkflow // empty] | unique | map(select(. != "'"$id"'")) | .[]' "$f")
+      ready=1
+      for dep in $deps; do
+        [[ " ${published[*]-} " == *" $dep "* ]] || { ready=0; break; }
+      done
+      if ((ready)); then
+        n8n_cli publish:workflow --id="$id"
+        published+=("$id")
+        progress=1
+      else
+        remaining+=("$f")
+      fi
+    done
+    pending=("${remaining[@]+"${remaining[@]}"}")
+    ((progress)) || { echo "Cannot resolve publish order for: ${pending[*]}" >&2; return 1; }
   done
 }
 
