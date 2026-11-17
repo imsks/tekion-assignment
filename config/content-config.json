@@ -1,0 +1,224 @@
+{
+  "version": "2026-11-17.1",
+  "models": {
+    "text": {
+      "primary": "gemini-4-hydrogen",
+      "fallback": "gemini-3.8-flash",
+      "thinking_level": "low",
+      "timeout_ms": 90000
+    },
+    "image": {
+      "primary": "gemini-nano-banana-2.1",
+      "fallback": "gemini-3.1-flash-lite-image",
+      "image_size": "1K",
+      "mime_type": "image/jpeg",
+      "timeout_ms": 120000
+    }
+  },
+  "pricing_usd_per_million_tokens": {
+    "gemini-4-hydrogen": { "input": 1.5, "output": 7.5 },
+    "gemini-3.8-flash": { "input": 0.75, "output": 3.75 },
+    "gemini-nano-banana-2.1": { "input": 1.5, "output": 7.5, "output_image": 30 },
+    "gemini-3.1-flash-lite-image": { "input": 0.25, "output": 1.5, "output_image": 30 }
+  },
+  "limits": {
+    "topic_min_chars": 3,
+    "topic_max_chars": 200,
+    "audience_max_chars": 100,
+    "tone_max_chars": 50,
+    "word_target_min": 550,
+    "word_target_max": 750,
+    "image_aspects": ["16:9", "1:1", "4:5"]
+  },
+  "quality": {
+    "min_words": 500,
+    "max_words": 800,
+    "default_word_target": 650,
+    "max_revisions": 2,
+    "min_h2_sections": 3,
+    "max_paragraph_words": 120,
+    "novelty_max_similarity": 0.6,
+    "banned_phrases": [
+      "as an ai",
+      "as a language model",
+      "in today's fast-paced world",
+      "delve",
+      "tapestry",
+      "game-changer",
+      "in conclusion",
+      "lorem ipsum",
+      "[insert",
+      "todo:"
+    ]
+  },
+  "budget": {
+    "total_ms": 280000,
+    "revision_cutoff_ms": 200000,
+    "image_fallback_cutoff_ms": 240000
+  },
+  "diversity": {
+    "history_window": 50,
+    "related_topic_similarity": 0.5,
+    "avoid_list_size": 5,
+    "used_weight": 0.2,
+    "affinity_weight": 2
+  },
+  "flags": {
+    "allow_fault_injection": true
+  },
+  "styles": {
+    "article": {
+      "label": "Feature article",
+      "purpose": "Explain a topic so a busy professional understands why it matters and what changes",
+      "structure": [
+        "A hook paragraph that frames why the topic matters now",
+        "Three or four H2 sections that build understanding step by step",
+        "A section on practical implications for the reader",
+        "A short closing section with one memorable takeaway"
+      ],
+      "tone": "Informative, clear and confident, without hype",
+      "rules": [
+        "Use concrete, realistic examples",
+        "Explain any jargon the first time it appears"
+      ],
+      "checks": {},
+      "visual_affinity": ["editorial photography", "cinematic still with shallow depth of field"]
+    },
+    "guide": {
+      "label": "How-to guide",
+      "purpose": "Help the reader complete a task or launch an initiative successfully",
+      "structure": [
+        "A short intro on who this is for and what they will achieve",
+        "A 'Before you start' H2 listing prerequisites",
+        "Five to seven steps, each as an H2 titled 'Step N: ...'",
+        "A 'Common pitfalls' H2",
+        "A short checklist to finish"
+      ],
+      "tone": "Practical, direct, second person",
+      "rules": [
+        "Every step starts with an action verb",
+        "Keep each step specific enough to act on today"
+      ],
+      "checks": { "min_steps": 5 },
+      "visual_affinity": ["isometric 3D illustration", "clean flat vector illustration"]
+    },
+    "opinion": {
+      "label": "Opinion piece",
+      "purpose": "Argue for a clear position and persuade a skeptical reader",
+      "structure": [
+        "State the thesis plainly in the first paragraph",
+        "Three H2 sections, each making one supporting argument",
+        "An H2 that presents the strongest counterargument and rebuts it",
+        "A closing call to action"
+      ],
+      "tone": "Persuasive and confident but fair, first person plural",
+      "rules": [
+        "Take a side; avoid both-sides hedging in the thesis",
+        "Acknowledge the best objection honestly"
+      ],
+      "checks": { "heading_keywords_any": ["counter", "skeptic", "critic", "objection", "other side", "but what about", "pushback"] },
+      "visual_affinity": ["high-contrast duotone graphic", "paper-cut collage"]
+    },
+    "trend_analysis": {
+      "label": "Trend analysis",
+      "purpose": "Explain where a trend stands, what drives it and what to watch next",
+      "structure": [
+        "An H2 on where things stand today",
+        "An H2 on the three main drivers behind the trend",
+        "An H2 on implications for different stakeholders",
+        "An H2 on what to watch over the next 12 to 24 months",
+        "A short bottom-line section"
+      ],
+      "tone": "Analytical and measured, with hedged forecasts",
+      "rules": [
+        "Do not invent statistics, dates, quotes or company claims; describe magnitude qualitatively unless it is widely known",
+        "Separate what is happening from what might happen"
+      ],
+      "checks": { "heading_keywords_any": ["watch", "next", "ahead", "outlook", "coming"] },
+      "visual_affinity": ["retro-futurist poster art", "cinematic still with shallow depth of field"]
+    },
+    "listicle": {
+      "label": "Listicle",
+      "purpose": "Give a skimmable set of distinct, useful ideas",
+      "structure": [
+        "A two- or three-sentence intro that promises the list",
+        "Five to seven numbered H2 items such as '## 1. ...', each with a bold one-line takeaway and two or three supporting sentences",
+        "A short wrap-up"
+      ],
+      "tone": "Punchy, energetic and skimmable",
+      "rules": [
+        "Every item must be distinct; no padding items",
+        "Lead each item with the takeaway, not the setup"
+      ],
+      "checks": { "min_numbered_h2": 5 },
+      "visual_affinity": ["clean flat vector illustration", "soft 3D clay render"]
+    }
+  },
+  "pools": {
+    "angles": [
+      { "id": "primer", "text": "A primer that builds understanding from first principles for newcomers" },
+      { "id": "contrarian", "text": "A contrarian take that challenges a popular assumption" },
+      { "id": "customer_journey", "text": "Told through the customer's journey, step by step" },
+      { "id": "operations", "text": "Behind the scenes: how operations and teams actually change" },
+      { "id": "roi", "text": "Through the lens of cost, ROI and business outcomes" },
+      { "id": "future", "text": "Future-looking: what changes over the next few years" },
+      { "id": "myths", "text": "Myth-busting: separating hype from reality" },
+      { "id": "risks", "text": "Risks, trade-offs and how to manage them" },
+      { "id": "history", "text": "How we got here, and what that history teaches" },
+      { "id": "playbook", "text": "A playbook of concrete moves a team can make this quarter" }
+    ],
+    "hooks": [
+      { "id": "question", "text": "Open with a provocative question" },
+      { "id": "scenario", "text": "Open with a short, vivid scenario" },
+      { "id": "bold_claim", "text": "Open with a bold but defensible claim" },
+      { "id": "analogy", "text": "Open with an unexpected analogy" },
+      { "id": "contrast", "text": "Open by contrasting the old way with the new way" },
+      { "id": "mini_story", "text": "Open with a two-sentence story about one person" }
+    ],
+    "audiences": [
+      { "id": "decision_makers", "text": "decision-makers weighing whether to invest" },
+      { "id": "practitioners", "text": "practitioners who do the work every day" },
+      { "id": "newcomers", "text": "newcomers who know little about the topic" },
+      { "id": "skeptics", "text": "skeptics who doubt the hype" },
+      { "id": "customers", "text": "customers who feel the effects first-hand" },
+      { "id": "planners", "text": "leaders planning for the next three years" }
+    ],
+    "visual_styles": [
+      "editorial photography",
+      "cinematic still with shallow depth of field",
+      "isometric 3D illustration",
+      "clean flat vector illustration",
+      "paper-cut collage",
+      "watercolor and ink illustration",
+      "minimal line art with a single accent color",
+      "retro-futurist poster art",
+      "soft 3D clay render",
+      "high-contrast duotone graphic"
+    ],
+    "compositions": [
+      "wide establishing shot",
+      "close-up detail shot",
+      "top-down flat lay",
+      "symmetrical centered composition",
+      "rule-of-thirds framing with generous negative space",
+      "low-angle hero shot"
+    ],
+    "palettes": [
+      "warm sunset oranges against deep blues",
+      "teal and amber",
+      "monochrome with one vivid accent color",
+      "soft pastels",
+      "deep navy and electric cyan",
+      "earthy greens and sand",
+      "high-contrast black, white and red",
+      "muted neutrals with brass highlights"
+    ],
+    "lighting": [
+      "golden-hour light",
+      "soft diffused studio light",
+      "moody low-key light",
+      "bright high-key daylight",
+      "neon night glow"
+    ]
+  }
+}

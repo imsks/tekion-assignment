@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+outputs/*
+!outputs/.gitkeep
+.vscode/
+*.decrypted.json
+.DS_Store

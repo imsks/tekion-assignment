@@ -1,0 +1,33 @@
+name: tekion-content-gen
+
+services:
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION:-2.47.7}
+    restart: unless-stopped
+    ports:
+      - "${N8N_HOST_PORT:-5678}:5678"
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Run scripts/init-env.sh first}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Kolkata}
+      TZ: ${GENERIC_TIMEZONE:-Asia/Kolkata}
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:${N8N_HOST_PORT:-5678}/
+      N8N_EDITOR_BASE_URL: http://localhost:${N8N_HOST_PORT:-5678}/
+      N8N_RESTRICT_FILE_ACCESS_TO: /home/node/.n8n-files
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./config:/home/node/.n8n-files/config:ro
+      - ./outputs:/home/node/.n8n-files/outputs
+      - ./workflows:/opt/workflows
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5678/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  n8n_data:
