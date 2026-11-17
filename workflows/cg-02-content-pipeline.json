@@ -116,21 +116,21 @@
     },
     {
       "parameters": {
-        "jsCode": "const STOP = new Set('a an and are as at be by for from how in into is it its of on or that the this to vs what when where which who why will with your our their about after before over under between new now than more most'.split(' '));\nconst tokens = text => String(text || '')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2 && !STOP.has(word))\n  .map(word => word.replace(/ies$/, 'y').replace(/([^s])s$/, '$1'));\nconst jaccard = (a, b) => {\n  const A = new Set(a);\n  const B = new Set(b);\n  if (!A.size || !B.size) return 0;\n  let shared = 0;\n  for (const x of A) if (B.has(x)) shared += 1;\n  return shared / (A.size + B.size - shared);\n};\n\nconst base = $('Validate Request').first().json;\nconst config = base.config;\nconst D = config.diversity;\nconst P = config.pools;\nconst request = base.request;\nconst run = base.run;\nconst history = $input.all()\n  .map(item => item.json)\n  .filter(row => row && row.run_id && ['success', 'needs_review', 'partial'].includes(row.status));\n\n// Seeded PRNG (FNV-1a + mulberry32): the same run_id and history always replay the same plan.\nlet state = 2166136261;\nfor (let i = 0; i < run.run_id.length; i += 1) {\n  state = Math.imul(state ^ run.run_id.charCodeAt(i), 16777619);\n}\nconst seed = state >>> 0;\nconst random = () => {\n  state = (state + 0x6D2B79F5) | 0;\n  let t = Math.imul(state ^ (state >>> 15), 1 | state);\n  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\n\nconst topicTokens = tokens(request.topic);\nconst topicKey = Array.from(new Set(topicTokens)).sort().join(' ');\nconst related = history.filter(row => jaccard(topicTokens, String(row.topic_key || '').split(' ').filter(Boolean)) >= D.related_topic_similarity);\nconst previous = history[0] || null;\n\n// Weighted draw. The previous run's choice is excluded, options already used for a related\n// topic are down-weighted, and visual styles that suit the format are boosted.\nconst choose = (options, field, boosted) => {\n  const usedForRelated = new Set(related.map(row => row[field]).filter(Boolean));\n  const weighted = options.map(option => {\n    const id = typeof option === 'string' ? option : option.id;\n    let weight = 1;\n    if (previous && previous[field] === id) weight = 0;\n    if (usedForRelated.has(id)) weight *= D.used_weight;\n    if (boosted && boosted.includes(id)) weight *= D.affinity_weight;\n    return { option, id, weight };\n  });\n  const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);\n  let ticket = random() * total;\n  for (const entry of weighted) {\n    if (entry.weight === 0) continue;\n    ticket -= entry.weight;\n    if (ticket <= 0) return entry;\n  }\n  return weighted.filter(entry => entry.weight > 0).pop() || weighted[0];\n};\n\nconst style = request.style_requested === 'auto'\n  ? choose(Object.keys(config.styles), 'style').id\n  : request.style_requested;\nconst styleConfig = config.styles[style];\nconst angle = choose(P.angles, 'angle').option;\nconst hook = choose(P.hooks, 'hook').option;\nconst audience = request.audience\n  ? { id: 'custom', text: request.audience }\n  : choose(P.audiences, 'audience').option;\nconst visual = {\n  style: choose(P.visual_styles, 'visual_style', styleConfig.visual_affinity).id,\n  composition: choose(P.compositions, 'composition').id,\n  palette: choose(P.palettes, 'palette').id,\n  lighting: choose(P.lighting, 'lighting').id\n};\n\nreturn [{\n  json: {\n    ctx: {\n      run,\n      request,\n      plan: {\n        style,\n        style_source: request.style_requested === 'auto' ? 'auto' : 'requested',\n        angle,\n        hook,\n        audience,\n        tone: request.tone || styleConfig.tone,\n        visual,\n        topic_key: topicKey,\n        history_considered: history.length,\n        related_runs: related.length,\n        avoid_titles: related.map(row => row.title).filter(Boolean).slice(0, D.avoid_list_size),\n        seed\n      },\n      brief: null,\n      brief_attempts: 0,\n      novelty: null,\n      novelty_retry: null,\n      article: null,\n      image: null,\n      image_prompt: null,\n      calls: [],\n      failure: null\n    }\n  }\n}];"
+        "jsCode": "const STOP = new Set('a an and are as at be by for from how in into is it its of on or that the this to vs what when where which who why will with your our their about after before over under between new now than more most'.split(' '));\nconst tokens = text => String(text || '')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2 && !STOP.has(word))\n  .map(word => word.replace(/ies$/, 'y').replace(/([^s])s$/, '$1'));\nconst jaccard = (a, b) => {\n  const A = new Set(a);\n  const B = new Set(b);\n  if (!A.size || !B.size) return 0;\n  let shared = 0;\n  for (const x of A) if (B.has(x)) shared += 1;\n  return shared / (A.size + B.size - shared);\n};\n\nconst base = $('Validate Request').first().json;\nconst config = base.config;\nconst D = config.diversity;\nconst P = config.pools;\nconst request = base.request;\nconst run = base.run;\n// Finished runs plus recent 'planned' reservations, so runs that start at the same time\n// (batch waves) also steer away from each other.\nconst history = $input.all()\n  .map(item => item.json)\n  .filter(row => row && row.run_id && (\n    ['success', 'needs_review', 'partial'].includes(row.status) ||\n    (row.status === 'planned' && Date.now() - Date.parse(row.createdAt) < 10 * 60 * 1000)\n  ));\n\n// Seeded PRNG (FNV-1a + mulberry32): the same run_id and history always replay the same plan.\nlet state = 2166136261;\nfor (let i = 0; i < run.run_id.length; i += 1) {\n  state = Math.imul(state ^ run.run_id.charCodeAt(i), 16777619);\n}\nconst seed = state >>> 0;\nconst random = () => {\n  state = (state + 0x6D2B79F5) | 0;\n  let t = Math.imul(state ^ (state >>> 15), 1 | state);\n  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\n\nconst topicTokens = tokens(request.topic);\nconst topicKey = Array.from(new Set(topicTokens)).sort().join(' ');\nconst related = history.filter(row => jaccard(topicTokens, String(row.topic_key || '').split(' ').filter(Boolean)) >= D.related_topic_similarity);\nconst previous = history[0] || null;\nconst lastRelated = related[0] || null;\n\n// Weighted draw. Choices of the previous run and of the latest run on a related topic are\n// excluded, older related-topic choices are down-weighted, and format-suited visuals are boosted.\nconst choose = (options, field, boosted) => {\n  const usedForRelated = new Set(related.map(row => row[field]).filter(Boolean));\n  const weighted = options.map(option => {\n    const id = typeof option === 'string' ? option : option.id;\n    let weight = 1;\n    if ((previous && previous[field] === id) || (lastRelated && lastRelated[field] === id)) weight = 0;\n    if (usedForRelated.has(id)) weight *= D.used_weight;\n    if (boosted && boosted.includes(id)) weight *= D.affinity_weight;\n    return { option, id, weight };\n  });\n  const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);\n  let ticket = random() * total;\n  for (const entry of weighted) {\n    if (entry.weight === 0) continue;\n    ticket -= entry.weight;\n    if (ticket <= 0) return entry;\n  }\n  return weighted.filter(entry => entry.weight > 0).pop() || weighted[0];\n};\n\nconst style = request.style_requested === 'auto'\n  ? choose(Object.keys(config.styles), 'style').id\n  : request.style_requested;\nconst styleConfig = config.styles[style];\nconst angle = choose(P.angles, 'angle').option;\nconst hook = choose(P.hooks, 'hook').option;\nconst audience = request.audience\n  ? { id: 'custom', text: request.audience }\n  : choose(P.audiences, 'audience').option;\nconst visual = {\n  style: choose(P.visual_styles, 'visual_style', styleConfig.visual_affinity).id,\n  composition: choose(P.compositions, 'composition').id,\n  palette: choose(P.palettes, 'palette').id,\n  lighting: choose(P.lighting, 'lighting').id\n};\n\nreturn [{\n  json: {\n    ctx: {\n      run,\n      request,\n      plan: {\n        style,\n        style_source: request.style_requested === 'auto' ? 'auto' : 'requested',\n        angle,\n        hook,\n        audience,\n        tone: request.tone || styleConfig.tone,\n        visual,\n        topic_key: topicKey,\n        history_considered: history.length,\n        related_runs: related.length,\n        avoid_titles: related.map(row => row.title).filter(Boolean).slice(0, D.avoid_list_size),\n        seed\n      },\n      brief: null,\n      brief_attempts: 0,\n      novelty: null,\n      novelty_retry: null,\n      article: null,\n      image: null,\n      image_prompt: null,\n      calls: [],\n      failure: null\n    }\n  }\n}];"
       },
       "id": "d80ceebe-63c1-4585-9b47-a8bddb538769",
       "name": "Plan Variation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1440,
+        1400,
         400
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const ctx = $json.ctx;\nconst config = $('Validate Request').first().json.config;\nconst M = config.models.text;\nconst style = config.styles[ctx.plan.style];\nconst plan = ctx.plan;\nconst lines = [\n  'Plan one ' + style.label.toLowerCase() + ' on this topic: \"' + ctx.request.topic + '\".',\n  '',\n  'Purpose of this format: ' + style.purpose + '.',\n  'Required structure (section headings must follow it):',\n  ...style.structure.map(item => '- ' + item),\n  'Format rules:',\n  ...style.rules.map(rule => '- ' + rule),\n  '',\n  'Audience: ' + plan.audience.text + '.',\n  'Tone: ' + plan.tone + '.',\n  'Angle that must shape the whole piece: ' + plan.angle.text + '.',\n  'Opening approach: ' + plan.hook.text + '.',\n  'Target length: about ' + ctx.request.word_target + ' words.'\n];\nif (plan.avoid_titles.length) {\n  lines.push('', 'Recent pieces on related topics used these titles. Choose a clearly different framing and title:');\n  plan.avoid_titles.forEach(title => lines.push('- ' + title));\n}\nif (ctx.novelty_retry) {\n  lines.push('', 'Your previous plan was titled \"' + ctx.novelty_retry.previous_title + '\", which is too close to an earlier piece. Use a distinctly different title and section structure.');\n}\nlines.push('', 'The image concept must describe one concrete scene that fits this piece, without text, logos or recognizable real people.');\n\nconst schema = {\n  type: 'object',\n  properties: {\n    title: { type: 'string', description: 'Specific, compelling headline of at most 90 characters' },\n    meta_description: { type: 'string', description: 'Search snippet of 140 to 160 characters' },\n    thesis: { type: 'string', description: 'The core message in one sentence' },\n    sections: {\n      type: 'array',\n      minItems: 3,\n      maxItems: 8,\n      items: {\n        type: 'object',\n        properties: {\n          heading: { type: 'string', description: 'Section heading exactly as it should appear in the article' },\n          key_points: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string' } }\n        },\n        required: ['heading', 'key_points']\n      }\n    },\n    keywords: { type: 'array', minItems: 3, maxItems: 6, items: { type: 'string' } },\n    image_concept: {\n      type: 'object',\n      properties: {\n        subject: { type: 'string', description: 'Main subject of the image' },\n        setting: { type: 'string', description: 'Where the scene takes place' },\n        details: { type: 'string', description: 'Two or three concrete visual details' },\n        mood: { type: 'string', description: 'Emotional tone of the image' }\n      },\n      required: ['subject', 'setting', 'details', 'mood']\n    }\n  },\n  required: ['title', 'meta_description', 'thesis', 'sections', 'keywords', 'image_concept']\n};\n\nreturn {\n  json: {\n    purpose: 'brief',\n    models: { primary: M.primary, fallback: M.fallback },\n    system: 'You are a senior editor who plans original, specific and accurate content. You never invent statistics, quotes or sources.',\n    prompt: lines.join('\\n'),\n    response_schema: schema,\n    temperature: 1,\n    max_output_tokens: 4096,\n    thinking_level: M.thinking_level,\n    timeout_ms: M.timeouts_ms.brief,\n    deadline_at: ctx.run.deadline_at,\n    pricing: config.pricing_usd_per_million_tokens,\n    simulate_primary_fail: ctx.run.simulate.text_primary_fail,\n    passthrough: ctx\n  }\n};"
+        "jsCode": "// The first pass arrives from Reserve Plan (the inserted row); retries arrive with ctx from Check Brief.\nconst ctx = $json.ctx || $('Plan Variation').first().json.ctx;\nconst config = $('Validate Request').first().json.config;\nconst M = config.models.text;\nconst style = config.styles[ctx.plan.style];\nconst plan = ctx.plan;\nconst lines = [\n  'Plan one ' + style.label.toLowerCase() + ' on this topic: \"' + ctx.request.topic + '\".',\n  '',\n  'Purpose of this format: ' + style.purpose + '.',\n  'Required structure (section headings must follow it):',\n  ...style.structure.map(item => '- ' + item),\n  'Format rules:',\n  ...style.rules.map(rule => '- ' + rule),\n  '',\n  'Audience: ' + plan.audience.text + '.',\n  'Tone: ' + plan.tone + '.',\n  'Angle that must shape the whole piece: ' + plan.angle.text + '.',\n  'Opening approach: ' + plan.hook.text + '.',\n  'Target length: about ' + ctx.request.word_target + ' words.'\n];\nif (plan.avoid_titles.length) {\n  lines.push('', 'Recent pieces on related topics used these titles. Choose a clearly different framing and title:');\n  plan.avoid_titles.forEach(title => lines.push('- ' + title));\n}\nif (ctx.novelty_retry) {\n  lines.push('', 'Your previous plan was titled \"' + ctx.novelty_retry.previous_title + '\", which is too close to an earlier piece. Use a distinctly different title and section structure.');\n}\nlines.push('', 'The image concept must describe one concrete scene that fits this piece, without text, logos or recognizable real people.');\n\nconst schema = {\n  type: 'object',\n  properties: {\n    title: { type: 'string', description: 'Specific, compelling headline of at most 90 characters' },\n    meta_description: { type: 'string', description: 'Search snippet of 140 to 160 characters' },\n    thesis: { type: 'string', description: 'The core message in one sentence' },\n    sections: {\n      type: 'array',\n      minItems: 3,\n      maxItems: 8,\n      items: {\n        type: 'object',\n        properties: {\n          heading: { type: 'string', description: 'Section heading exactly as it should appear in the article' },\n          key_points: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string' } }\n        },\n        required: ['heading', 'key_points']\n      }\n    },\n    keywords: { type: 'array', minItems: 3, maxItems: 6, items: { type: 'string' } },\n    image_concept: {\n      type: 'object',\n      properties: {\n        subject: { type: 'string', description: 'Main subject of the image' },\n        setting: { type: 'string', description: 'Where the scene takes place' },\n        details: { type: 'string', description: 'Two or three concrete visual details' },\n        mood: { type: 'string', description: 'Emotional tone of the image' }\n      },\n      required: ['subject', 'setting', 'details', 'mood']\n    }\n  },\n  required: ['title', 'meta_description', 'thesis', 'sections', 'keywords', 'image_concept']\n};\n\nreturn {\n  json: {\n    purpose: 'brief',\n    models: { primary: M.primary, fallback: M.fallback },\n    system: 'You are a senior editor who plans original, specific and accurate content. You never invent statistics, quotes or sources.',\n    prompt: lines.join('\\n'),\n    response_schema: schema,\n    temperature: 1,\n    max_output_tokens: 4096,\n    thinking_level: M.thinking_level,\n    timeout_ms: M.timeouts_ms.brief,\n    deadline_at: ctx.run.deadline_at,\n    pricing: config.pricing_usd_per_million_tokens,\n    simulate_primary_fail: ctx.run.simulate.text_primary_fail,\n    passthrough: ctx\n  }\n};"
       },
       "id": "ddaa13f9-61ac-4205-92d1-aeb0ae50af1d",
       "name": "Build Brief Request",
@@ -504,16 +504,27 @@
     },
     {
       "parameters": {
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
         "dataTableId": {
           "__rl": true,
           "mode": "name",
           "value": "content_runs"
         },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": null
+        "filters": {
+          "conditions": [
+            {
+              "condition": "eq",
+              "keyName": "run_id",
+              "keyValue": "={{ $json.run_id }}"
+            }
+          ]
         },
-        "options": {}
+        "matchType": "allConditions",
+        "operation": "upsert",
+        "resource": "row"
       },
       "id": "13a05b1d-e521-4b29-9294-b775161b0cd5",
       "name": "Log Run",
@@ -552,6 +563,172 @@
         -96,
         -144
       ]
+    },
+    {
+      "id": "abbb1c8f-5571-4a30-b721-f3b04528ad24",
+      "name": "Reserve Plan",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        600
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "run_id",
+              "id": "run_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "source",
+              "id": "source",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "status",
+              "id": "status",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "topic",
+              "id": "topic",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "topic_key",
+              "id": "topic_key",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "style",
+              "id": "style",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "style_requested",
+              "id": "style_requested",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "angle",
+              "id": "angle",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "hook",
+              "id": "hook",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "audience",
+              "id": "audience",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "visual_style",
+              "id": "visual_style",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "composition",
+              "id": "composition",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "palette",
+              "id": "palette",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "lighting",
+              "id": "lighting",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "angle": "={{ $json.ctx.plan.angle.id }}",
+            "audience": "={{ $json.ctx.plan.audience.id }}",
+            "composition": "={{ $json.ctx.plan.visual.composition }}",
+            "hook": "={{ $json.ctx.plan.hook.id }}",
+            "lighting": "={{ $json.ctx.plan.visual.lighting }}",
+            "palette": "={{ $json.ctx.plan.visual.palette }}",
+            "run_id": "={{ $json.ctx.run.run_id }}",
+            "source": "={{ $json.ctx.run.source }}",
+            "status": "planned",
+            "style": "={{ $json.ctx.plan.style }}",
+            "style_requested": "={{ $json.ctx.request.style_requested }}",
+            "topic": "={{ $json.ctx.request.topic }}",
+            "topic_key": "={{ $json.ctx.plan.topic_key }}",
+            "visual_style": "={{ $json.ctx.plan.visual.style }}"
+          }
+        },
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "content_runs"
+        },
+        "operation": "insert",
+        "resource": "row"
+      }
     }
   ],
   "connections": {
@@ -622,17 +799,6 @@
         [
           {
             "node": "Plan Variation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plan Variation": {
-      "main": [
-        [
-          {
-            "node": "Build Brief Request",
             "type": "main",
             "index": 0
           }
@@ -831,6 +997,28 @@
           }
         ]
       ]
+    },
+    "Plan Variation": {
+      "main": [
+        [
+          {
+            "node": "Reserve Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reserve Plan": {
+      "main": [
+        [
+          {
+            "node": "Build Brief Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -852,9 +1040,10 @@
         "50acdd02-c5d0-412a-879a-5b0f21550988",
         "cccf5535-4c3e-4686-90d4-bfb2a0f32b38",
         "32e0c826-e4d5-4544-90ae-2d5fe6307338",
-        "d80ceebe-63c1-4585-9b47-a8bddb538769"
+        "d80ceebe-63c1-4585-9b47-a8bddb538769",
+        "abbb1c8f-5571-4a30-b721-f3b04528ad24"
       ],
-      "description": "Loads config, validates the request (rejects bad input), reads recent runs and plans style, angle, hook, audience and visuals for diversity."
+      "description": "Loads config, validates the request (rejects bad input), reads recent runs, plans style/angle/hook/audience/visuals and reserves the plan."
     },
     {
       "id": "3d91b087-ffd0-470b-80a9-c32d56740f74",

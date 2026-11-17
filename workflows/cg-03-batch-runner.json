@@ -1,0 +1,657 @@
+{
+  "id": "TdZs9TJfHyfF94LK",
+  "name": "CG · 03 Batch Runner",
+  "description": "Bulk generation: POST /webhook/content/batch returns 202 with a batch id, runs topics in waves through the content API, and writes a summary with latency percentiles and cost. GET /webhook/content/batch-status returns it.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "ac864174-f69b-470b-a00c-cbdfa1c3805c",
+      "name": "Batch API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content/batch",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "d2d2ab9b-c8e8-45b7-942c-cd62daa0372c",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CgWebhookApiKey1",
+          "name": "Content API key (X-API-Key)"
+        }
+      }
+    },
+    {
+      "id": "f724bbad-d726-468c-ae2f-1ce8e6f13f94",
+      "name": "Plan Batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const req = $input.first().json;\nconst body = req.body && typeof req.body === 'object' ? req.body : {};\nconst errors = [];\nconst topics = Array.isArray(body.topics) ? body.topics : [];\nif (!topics.length) errors.push('topics must be a non-empty array');\nif (topics.length > 50) errors.push('a batch can hold at most 50 topics');\nconst defaults = body.defaults && typeof body.defaults === 'object' ? body.defaults : {};\nconst concurrency = body.concurrency === undefined ? 3 : Number(body.concurrency);\nif (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 5) {\n  errors.push('concurrency must be a whole number between 1 and 5');\n}\nconst items = topics.slice(0, 50).map(entry => Object.assign({}, defaults, typeof entry === 'string' ? { topic: entry } : (entry || {})));\nitems.forEach((item, i) => {\n  if (typeof item.topic !== 'string' || !item.topic.trim()) errors.push('topics[' + i + '] needs a topic');\n});\n\nconst batchId = 'batch-' + $now.toFormat('yyyyMMdd-HHmmss') + '-' + Math.random().toString(36).slice(2, 8);\nconst host = (req.headers && req.headers.host) || 'localhost:5678';\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    batch_id: batchId,\n    concurrency,\n    items,\n    submitted_at: $now.toISO(),\n    started_ms: Date.now(),\n    file_path: '/home/node/.n8n-files/outputs/' + batchId + '.json',\n    accepted_body: {\n      batch_id: batchId,\n      status: 'accepted',\n      count: items.length,\n      concurrency,\n      status_url: 'http://' + host + '/webhook/content/batch-status?batch_id=' + batchId,\n      summary_path: 'outputs/' + batchId + '.json'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f8a09ba6-bf58-42eb-933b-6b100c3f45a9",
+      "name": "Batch Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ae538793-1632-45ec-bc78-6fef107078ae",
+      "name": "Build Manifest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const p = $input.first().json;\nconst manifest = {\n  batch_id: p.batch_id,\n  status: 'running',\n  submitted_at: p.submitted_at,\n  count: p.items.length,\n  concurrency: p.concurrency,\n  topics: p.items.map(item => item.topic)\n};\nreturn [{\n  json: { path: p.file_path },\n  binary: { data: { data: Buffer.from(JSON.stringify(manifest, null, 2), 'utf8').toString('base64'), mimeType: 'application/json', fileName: p.batch_id + '.json', fileExtension: 'json' } }\n}];"
+      }
+    },
+    {
+      "id": "b136a857-4384-4d36-bd3f-9a02f738215b",
+      "name": "Write Manifest",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.path }}",
+        "dataPropertyName": "data"
+      }
+    },
+    {
+      "id": "56862a1e-8118-4b12-a1d6-a051d15c953c",
+      "name": "Accept Batch",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $(\"Plan Batch\").first().json.accepted_body }}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "a0e24f87-d089-4e39-8ea1-251b722d1025",
+      "name": "Fan Out Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const p = $('Plan Batch').first().json;\nreturn p.items.map((item, index) => ({\n  json: { index, request_id: p.batch_id + '-' + String(index + 1).padStart(2, '0'), body: item }\n}));"
+      }
+    },
+    {
+      "id": "4ccaab99-dd48-477a-826b-04d6a5764605",
+      "name": "Reject Batch",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        720,
+        200
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: \"rejected\", errors: $json.errors } }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "c939b51a-c9b6-40a6-9dc0-db30fa1aaa78",
+      "name": "Summarize Batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -160
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const p = $('Plan Batch').first().json;\nconst results = $input.all().map((item, index) => {\n  const r = item.json;\n  const body = r.body && typeof r.body === 'object' ? r.body : {};\n  const request = p.items[index] || {};\n  const failure = r.error ? (r.error.message || String(r.error)) : null;\n  return {\n    index: index + 1,\n    topic: request.topic,\n    http_status: r.statusCode || null,\n    status: body.status || (failure ? 'error' : 'unknown'),\n    run_id: body.run_id || null,\n    style: body.style || null,\n    title: body.title || null,\n    word_count: body.word_count || null,\n    duration_ms: body.timings_ms ? body.timings_ms.total : null,\n    cost_usd: body.cost_usd || 0,\n    fallback_used: Boolean(body.models && body.models.fallback_used),\n    article: body.files ? body.files.article : null,\n    error: body.error || (body.errors ? body.errors.join('; ') : null) || body.detail || failure\n  };\n});\nconst durations = results.map(r => r.duration_ms).filter(d => typeof d === 'number').sort((a, b) => a - b);\nconst percentile = q => (durations.length ? durations[Math.min(durations.length - 1, Math.ceil(q * durations.length) - 1)] : null);\nconst byStatus = {};\nresults.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });\nconst summary = {\n  batch_id: p.batch_id,\n  status: 'completed',\n  submitted_at: p.submitted_at,\n  completed_at: $now.toISO(),\n  wall_time_ms: Date.now() - p.started_ms,\n  count: results.length,\n  concurrency: p.concurrency,\n  by_status: byStatus,\n  runs_within_5_min: durations.filter(d => d <= 300000).length,\n  latency_ms: { p50: percentile(0.5), p95: percentile(0.95), max: durations.length ? durations[durations.length - 1] : null },\n  cost_usd_total: Number(results.reduce((sum, r) => sum + r.cost_usd, 0).toFixed(4)),\n  items: results\n};\nreturn [{\n  json: { path: p.file_path, summary },\n  binary: { data: { data: Buffer.from(JSON.stringify(summary, null, 2), 'utf8').toString('base64'), mimeType: 'application/json', fileName: p.batch_id + '.json', fileExtension: 'json' } }\n}];"
+      }
+    },
+    {
+      "id": "ec12362c-21b4-4887-b332-6a68dfece953",
+      "name": "Save Batch Summary",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        -160
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.path }}",
+        "dataPropertyName": "data"
+      }
+    },
+    {
+      "id": "ebfad579-bdb1-4c8a-a91e-7538eb47286d",
+      "name": "Generate via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/content",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Request-Id",
+              "value": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchInterval": 2000,
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CgWebhookApiKey1",
+          "name": "Content API key (X-API-Key)"
+        }
+      }
+    },
+    {
+      "id": "783923a2-0412-4091-bd6f-7072c7eff098",
+      "name": "Loop Over Topics",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "batchSize": "={{ $(\"Plan Batch\").first().json.concurrency }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "6990e6c0-aca6-40ec-9f77-b37ff82bc86f",
+      "name": "Batch Status API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        600
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "content/batch-status",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "41dbfdc9-b785-4a9e-8807-db2f37b1a339",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CgWebhookApiKey1",
+          "name": "Content API key (X-API-Key)"
+        }
+      }
+    },
+    {
+      "id": "d07493df-b881-4672-be3c-3a7feefa9f9c",
+      "name": "Check Batch Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const id = String(($input.first().json.query || {}).batch_id || '');\n// Strict pattern: the id becomes part of a file path, so nothing else is allowed through.\nconst valid = /^batch-\\d{8}-\\d{6}-[a-z0-9]{1,8}$/.test(id);\nreturn [{ json: { valid, batch_id: id, path: '/home/node/.n8n-files/outputs/' + (valid ? id : 'invalid') + '.json' } }];"
+      }
+    },
+    {
+      "id": "9c125d61-b277-4790-b5bc-d093359523f0",
+      "name": "Batch Id Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        480,
+        600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "3eb8f890-a4e1-4924-9d34-a1027190849e",
+      "name": "Read Batch File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        520
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.path }}"
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "182ba766-f415-40d2-83e7-c084b17fde3d",
+      "name": "Load Batch Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nif (!item || !item.binary || !item.binary.data) {\n  return [{ json: { status_code: 404, body: { status: 'not_found', error: 'Unknown batch_id' } } }];\n}\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nreturn [{ json: { status_code: 200, body: JSON.parse(buffer.toString('utf8')) } }];"
+      }
+    },
+    {
+      "id": "bfb2472b-e9fd-4c4c-8fc7-54a741a4078f",
+      "name": "Respond Batch Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.body }}",
+        "options": {
+          "responseCode": "={{ $json.status_code }}"
+        }
+      }
+    },
+    {
+      "id": "cccb6409-bb09-4260-a2ca-f08f4a0e5689",
+      "name": "Invalid Id Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        720
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { status_code: 400, body: { status: 'rejected', error: 'batch_id is missing or malformed' } } }];"
+      }
+    },
+    {
+      "id": "64f69e3a-d33e-4bf4-a36f-4e606eccb4fd",
+      "name": "Sticky Note ae1b749f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -96
+      ],
+      "parameters": {
+        "content": "## CG · 03 Batch Runner\nBulk generation for many topics.\n\n`POST /webhook/content/batch` with `{ \"topics\": [\"...\", {\"topic\": \"...\", \"style\": \"guide\"}], \"defaults\": {...}, \"concurrency\": 3 }` answers **202** at once with a `batch_id`, then runs the topics in waves of `concurrency` through the public content API, so every item gets the same validation, fallbacks, quality gate and 5-minute budget.\n\nThe summary (status counts, p50/p95 latency, cost, run ids) is written to `outputs/<batch_id>.json`; `GET /webhook/content/batch-status?batch_id=...` returns it.",
+        "color": 7,
+        "width": 160,
+        "height": 224
+      }
+    }
+  ],
+  "connections": {
+    "Batch API": {
+      "main": [
+        [
+          {
+            "node": "Plan Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Batch": {
+      "main": [
+        [
+          {
+            "node": "Batch Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Manifest": {
+      "main": [
+        [
+          {
+            "node": "Write Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Manifest": {
+      "main": [
+        [
+          {
+            "node": "Accept Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept Batch": {
+      "main": [
+        [
+          {
+            "node": "Fan Out Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fan Out Topics": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Batch": {
+      "main": [
+        [
+          {
+            "node": "Save Batch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate via API": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Topics": {
+      "main": [
+        [
+          {
+            "node": "Summarize Batch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Status API": {
+      "main": [
+        [
+          {
+            "node": "Check Batch Id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Batch Id": {
+      "main": [
+        [
+          {
+            "node": "Batch Id Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Id Valid?": {
+      "main": [
+        [
+          {
+            "node": "Read Batch File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Id Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Batch File": {
+      "main": [
+        [
+          {
+            "node": "Load Batch Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Batch Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Batch Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid Id Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Batch Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "U8pOSL3CVNUKpdfY",
+    "executionTimeout": 3600
+  },
+  "nodeGroups": [
+    {
+      "id": "4a0e3755-4976-4e94-a57f-1491d2f5ce35",
+      "name": "Accept batch",
+      "nodeIds": [
+        "f724bbad-d726-468c-ae2f-1ce8e6f13f94",
+        "f8a09ba6-bf58-42eb-933b-6b100c3f45a9",
+        "4ccaab99-dd48-477a-826b-04d6a5764605",
+        "ae538793-1632-45ec-bc78-6fef107078ae",
+        "b136a857-4384-4d36-bd3f-9a02f738215b",
+        "56862a1e-8118-4b12-a1d6-a051d15c953c"
+      ],
+      "description": "Validates the topic list, writes a running manifest and answers 202 with the batch id (400 if invalid)."
+    },
+    {
+      "id": "1dcb5999-fa72-49c3-befb-ffdfa139989d",
+      "name": "Generate in waves",
+      "nodeIds": [
+        "a0e24f87-d089-4e39-8ea1-251b722d1025",
+        "783923a2-0412-4091-bd6f-7072c7eff098",
+        "ebfad579-bdb1-4c8a-a91e-7538eb47286d"
+      ],
+      "description": "Calls the content API for each topic, a wave of `concurrency` requests at a time."
+    },
+    {
+      "id": "6eadf230-3b9b-48d6-af54-ad7f99978486",
+      "name": "Summarize",
+      "nodeIds": [
+        "c939b51a-c9b6-40a6-9dc0-db30fa1aaa78",
+        "ec12362c-21b4-4887-b332-6a68dfece953"
+      ],
+      "description": "Builds status counts, p50/p95 latency and cost per batch and saves outputs/<batch_id>.json."
+    },
+    {
+      "id": "1f821308-6cea-455d-bd5a-647dbdf937b7",
+      "name": "Batch status",
+      "nodeIds": [
+        "d07493df-b881-4672-be3c-3a7feefa9f9c",
+        "9c125d61-b277-4790-b5bc-d093359523f0",
+        "3eb8f890-a4e1-4924-9d34-a1027190849e",
+        "182ba766-f415-40d2-83e7-c084b17fde3d",
+        "cccb6409-bb09-4260-a2ca-f08f4a0e5689",
+        "bfb2472b-e9fd-4c4c-8fc7-54a741a4078f"
+      ],
+      "description": "Returns the saved batch file for a valid batch_id, 404 for an unknown one and 400 for a malformed one."
+    }
+  ],
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

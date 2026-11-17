@@ -73,9 +73,36 @@ publish_workflows() {
   done
 }
 
+restart_n8n() {
+  # Published workflows register their webhooks and forms when n8n starts.
+  docker compose restart n8n >/dev/null
+  local port="${N8N_HOST_PORT:-5678}" i
+  for i in $(seq 1 60); do
+    if curl -fsS "http://localhost:${port}/healthz" >/dev/null 2>&1; then
+      echo "n8n is ready at http://localhost:${port}"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "n8n did not become healthy in time; check: docker compose logs n8n" >&2
+  return 1
+}
+
+print_next_steps() {
+  local port="${N8N_HOST_PORT:-5678}"
+  cat <<EOF
+
+Setup complete.
+  Editor:   http://localhost:${port}   (create the owner account on first visit)
+  Form:     http://localhost:${port}/form/content-form
+  API:      scripts/generate.sh "your topic" [style]
+  Batch:    scripts/run-batch.sh samples/topics.json
+EOF
+}
+
 case "${1:-all}" in
   credentials) import_credentials ;;
-  workflows) import_workflows; run_setup_workflow; publish_workflows ;;
-  all) import_credentials; import_workflows; run_setup_workflow; publish_workflows ;;
+  workflows) import_workflows; run_setup_workflow; publish_workflows; restart_n8n ;;
+  all) import_credentials; import_workflows; run_setup_workflow; publish_workflows; restart_n8n; print_next_steps ;;
   *) echo "Usage: $0 [all|credentials|workflows]"; exit 1 ;;
 esac
