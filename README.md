@@ -50,11 +50,13 @@ The pipeline runs five stages, each a group on the n8n canvas: **validate & plan
 ## Quick start
 
 ```bash
-scripts/init-env.sh                 # creates .env with generated secrets; then add GEMINI_API_KEY
+cp .env.example .env                # fill in N8N_ENCRYPTION_KEY, WEBHOOK_API_KEY, GEMINI_API_KEY
 docker compose up -d                # n8n 2.47.7 on http://localhost:5678
 # open http://localhost:5678 and create the owner account
 scripts/setup.sh                    # credentials, workflows, publish, Data Tables
-scripts/generate.sh "How to launch a digital retailing program at a car dealership" guide
+source .env && curl -X POST http://localhost:5678/webhook/content \
+  -H "X-API-Key: $WEBHOOK_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"topic": "How to launch a digital retailing program at a car dealership", "style": "guide"}'
 ```
 
 Or open http://localhost:5678/form/content-form. Full instructions and troubleshooting: [docs/setup.md](docs/setup.md).
@@ -75,7 +77,7 @@ Assumptions, limitations and the path to large-scale operation (queue mode, Post
 ```
 config/content-config.json   models, prices, budget, formats, diversity pools, quality rules
 workflows/                   exported n8n workflows (import with scripts/setup.sh)
-scripts/                     init-env, setup, generate, run-batch, collect-samples, export, check-gemini
+scripts/                     setup (install into n8n), export (workflows back to clean JSON)
 samples/                     generated sample outputs with a gallery README
 docs/                        architecture, setup, API reference
 outputs/                     generated files (git-ignored)

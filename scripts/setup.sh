@@ -9,7 +9,7 @@ n8n_cli() { docker compose exec -T n8n n8n "$@"; }
 
 import_credentials() {
   : "${GEMINI_API_KEY:?Add GEMINI_API_KEY to .env}"
-  : "${WEBHOOK_API_KEY:?Run scripts/init-env.sh first}"
+  : "${WEBHOOK_API_KEY:?Set WEBHOOK_API_KEY in .env}"
   # Fixed IDs so imported workflows bind to these credentials automatically.
   jq -n '[
     {id: "CgGeminiApiKey01", name: "Gemini API", type: "googlePalmApi",
@@ -105,8 +105,8 @@ print_next_steps() {
 Setup complete.
   Editor:   http://localhost:${port}   (create the owner account on first visit)
   Form:     http://localhost:${port}/form/content-form
-  API:      scripts/generate.sh "your topic" [style]
-  Batch:    scripts/run-batch.sh samples/topics.json
+  API:      POST http://localhost:${port}/webhook/content        (header X-API-Key)
+  Batch:    POST http://localhost:${port}/webhook/content/batch  (header X-API-Key)
 EOF
 }
 

@@ -12,22 +12,12 @@ Tested on macOS with Docker Desktop. Linux works the same way.
 
 ```bash
 git clone <this repo> tekion-assignment && cd tekion-assignment
-scripts/init-env.sh
+cp .env.example .env && chmod 600 .env
 ```
 
-`init-env.sh` creates `.env` (mode 600) and generates `N8N_ENCRYPTION_KEY` and `WEBHOOK_API_KEY` without printing them. Open `.env` and set:
-
-```
-GEMINI_API_KEY=your-key
-```
+Fill in the three empty values in `.env`: `N8N_ENCRYPTION_KEY` (generate one with `openssl rand -hex 32`), `WEBHOOK_API_KEY` (`openssl rand -hex 24`; clients send it in the `X-API-Key` header) and `GEMINI_API_KEY` (your key).
 
 Optional: `N8N_HOST_PORT` (default 5678) and `GENERIC_TIMEZONE` (default Asia/Kolkata).
-
-Check the key and the models before going further (prints only status, latency and token counts; writes test images to `outputs/check/`):
-
-```bash
-scripts/check-gemini.sh
-```
 
 ## 2. Start n8n
 
@@ -64,35 +54,42 @@ Re-running it is safe. `scripts/setup.sh workflows` re-imports and re-publishes 
 
 **Form**: open http://localhost:5678/form/content-form, enter a topic, press Generate. The result page shows the article, image, status, timings, cost and diversity choices.
 
-**API** (helper script, keeps the key out of the process list):
+**API**:
 
 ```bash
-scripts/generate.sh "How to launch a digital retailing program at a car dealership" guide
-scripts/generate.sh "Dealerships should publish transparent prices" auto '{"audience": "general managers", "image_aspect": "1:1"}'
-FULL=1 scripts/generate.sh "EV service revenue" trend_analysis     # whole JSON incl. the article
-```
+source .env    # loads WEBHOOK_API_KEY into this shell
 
-**API** (plain curl):
-
-```bash
-source .env
-curl -X POST http://localhost:5678/webhook/content \
+curl -s -X POST http://localhost:5678/webhook/content \
   -H "X-API-Key: $WEBHOOK_API_KEY" -H 'Content-Type: application/json' \
-  -d '{"topic": "Ways dealerships can cut used-car reconditioning time", "style": "listicle"}'
+  -d '{"topic": "Ways dealerships can cut used-car reconditioning time", "style": "listicle"}' \
+  | jq '{status, title, word_count, files, timings_ms, cost_usd}'
 ```
+
+Drop the `jq` filter to see the whole response, including the article Markdown.
 
 **Batch**:
 
 ```bash
-scripts/run-batch.sh samples/topics.json           # 202 + polling; prints the summary and the batch id
-scripts/collect-samples.sh <batch_id>              # copies the runs into samples/ and rebuilds samples/README.md
+curl -s -X POST http://localhost:5678/webhook/content/batch \
+  -H "X-API-Key: $WEBHOOK_API_KEY" -H 'Content-Type: application/json' \
+  --data-binary @samples/topics.json                # 202 with batch_id and status_url
+
+curl -s -H "X-API-Key: $WEBHOOK_API_KEY" \
+  "http://localhost:5678/webhook/content/batch-status?batch_id=<batch_id>" \
+  | jq '{status, by_status, latency_ms, cost_usd_total}'
 ```
 
 **Fault injection** (shows retries, fallbacks and the error workflow):
 
 ```bash
-scripts/generate.sh "Fallback demo topic" auto '{"simulate": {"text_primary_fail": true, "image_primary_fail": true}}'
-scripts/generate.sh "Crash demo topic" auto '{"simulate": {"fatal": true}}'     # 500, logged in content_errors
+curl -s -X POST http://localhost:5678/webhook/content \
+  -H "X-API-Key: $WEBHOOK_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"topic": "Fallback demo topic", "simulate": {"text_primary_fail": true, "image_primary_fail": true}}' \
+  | jq '{status, models}'
+
+curl -s -X POST http://localhost:5678/webhook/content \
+  -H "X-API-Key: $WEBHOOK_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"topic": "Crash demo topic", "simulate": {"fatal": true}}'    # 500, logged in content_errors
 ```
 
 See [api.md](api.md) for every field and response.
@@ -124,4 +121,4 @@ See [api.md](api.md) for every field and response.
 
 ## 9. Verified fresh install
 
-The full sequence above (clone, `init-env.sh`, `docker compose up -d`, `setup.sh`) was rehearsed from a fresh clone on a separate Compose project and port: credentials and workflows imported, publishing order resolved, Data Tables created, the form served, and the API answered 403 for a wrong key, 400 for invalid input, 404/400 for unknown or malformed batch ids, and 502 with a clear reason for a real run (the Gemini spend cap had been reached at that moment, which exercised the failure path end to end).
+The full sequence above (clone, `.env`, `docker compose up -d`, `setup.sh`) was rehearsed from a fresh clone on a separate Compose project and port: credentials and workflows imported, publishing order resolved, Data Tables created, the form served, and the API answered 403 for a wrong key, 400 for invalid input, 404/400 for unknown or malformed batch ids, and 502 with a clear reason for a real run (the Gemini spend cap had been reached at that moment, which exercised the failure path end to end).

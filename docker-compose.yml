@@ -7,7 +7,7 @@ services:
     ports:
       - "${N8N_HOST_PORT:-5678}:5678"
     environment:
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Run scripts/init-env.sh first}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Set N8N_ENCRYPTION_KEY in .env}
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Kolkata}
       TZ: ${GENERIC_TIMEZONE:-Asia/Kolkata}
       N8N_HOST: localhost
