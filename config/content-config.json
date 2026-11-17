@@ -1,18 +1,17 @@
 {
-  "version": "2026-11-17.1",
+  "version": "2026-11-17.2",
   "models": {
     "text": {
       "primary": "gemini-4-hydrogen",
       "fallback": "gemini-3.8-flash",
       "thinking_level": "low",
-      "timeout_ms": 90000
+      "timeouts_ms": { "brief": 45000, "article": 75000 }
     },
     "image": {
       "primary": "gemini-nano-banana-2.1",
       "fallback": "gemini-3.1-flash-lite-image",
       "image_size": "1K",
-      "mime_type": "image/jpeg",
-      "timeout_ms": 120000
+      "timeout_ms": 90000
     }
   },
   "pricing_usd_per_million_tokens": {
@@ -53,8 +52,7 @@
   },
   "budget": {
     "total_ms": 280000,
-    "revision_cutoff_ms": 200000,
-    "image_fallback_cutoff_ms": 240000
+    "revision_cutoff_ms": 200000
   },
   "diversity": {
     "history_window": 50,
